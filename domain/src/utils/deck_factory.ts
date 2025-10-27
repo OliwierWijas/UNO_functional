@@ -1,48 +1,36 @@
-import type { Card } from "../model/card"
-import type { Color, Digit, Type } from "../model/types"
+import type { Card } from "../model/types"
+import type { Color, Digit } from "../model/types"
 import { standardShuffler } from "./random_utils"
 
+const DIGITS: readonly Digit[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+const COLORS: Color[] = ['BLUE', 'RED', 'GREEN', 'YELLOW']
 
-export class DeckFactory {
-  static DIGITS: readonly Digit[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+function create_numbered_cards(color: Color): Card[] {
+  return [
+    ...DIGITS.map((n) => ({ type: 'NUMBERED' as const, color, number: n })),
+    ...DIGITS.slice(1).map((n) => ({ type: 'NUMBERED' as const, color, number: n })),
+  ]
+}
 
-  // Create NUMBERED cards for a given color
-  static createNumberedCards(color: Color): Card<'NUMBERED'>[] {
-    return [
-      ...this.DIGITS.map((n) => ({ type: 'NUMBERED' as const, color, number: n })),
-      ...this.DIGITS.slice(1).map((n) => ({ type: 'NUMBERED' as const, color, number: n })),
-    ]
-  }
+function create_typed_cards(type: 'SKIP' | 'REVERSE' | 'DRAW2', color: Color, count: number): Card[] {
+  return Array.from({ length: count }, () => ({ type, color }))
+}
 
-  // Create colored typed cards: SKIP, REVERSE, DRAW2
-  static createTypedCards<T extends Exclude<Type, 'NUMBERED' | 'WILD' | 'DRAW4'>>(
-    type: T,
-    color: Color,
-    n: number,
-  ): Card<T>[] {
-    return Array.from({ length: n }, () => ({ type, color }) as Card<T>)
-  }
+function create_wild_cards(type: 'WILD' | 'DRAW4', count: number): Card[] {
+  return Array.from({ length: count }, () => ({ type }))
+}
 
-  // Create wild cards: WILD, DRAW4
-  static createWildCards<T extends Extract<Type, 'WILD' | 'DRAW4'>>(type: T, n: number): Card<T>[] {
-    return Array.from({ length: n }, () => ({ type }) as Card<T>)
-  }
+export function create_full_deck(): Card[] {
+  const typed_types: ('SKIP' | 'REVERSE' | 'DRAW2')[] = ['SKIP', 'REVERSE', 'DRAW2']
+  const wild_types: ('WILD' | 'DRAW4')[] = ['WILD', 'DRAW4']
 
-  static createFullDeck(): Card<Type>[] {
-    const COLORS: Color[] = ['BLUE', 'RED', 'GREEN', 'YELLOW']
-    const TYPED_TYPES: Exclude<Type, 'NUMBERED' | 'WILD' | 'DRAW4'>[] = ['SKIP', 'REVERSE', 'DRAW2']
-    const WILD_TYPES: Extract<Type, 'WILD' | 'DRAW4'>[] = ['WILD', 'DRAW4']
+  const cards = [
+    ...COLORS.flatMap(create_numbered_cards),
+    ...typed_types.flatMap((type) =>
+      COLORS.flatMap((color) => create_typed_cards(type, color, 2))
+    ),
+    ...wild_types.flatMap((type) => create_wild_cards(type, 4)),
+  ]
 
-    const cards = [
-      ...COLORS.flatMap((color) => this.createNumberedCards(color)),
-      ...TYPED_TYPES.flatMap((type) =>
-        COLORS.flatMap((color) => this.createTypedCards(type, color, 2)),
-      ),
-      ...WILD_TYPES.flatMap((type) => this.createWildCards(type, 4)),
-    ]
-
-    standardShuffler(cards)
-    
-    return cards
-  }
+  return standardShuffler(cards)
 }
