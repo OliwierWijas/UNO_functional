@@ -1,0 +1,81 @@
+type Game {
+  name: String!
+  state: String!
+  playerHands: [PlayerHand]
+}
+
+type PlayerHand {
+  playerName: String!
+  cards: [String]
+  score: Int
+}
+
+type PlayerHandSubscription {
+  playerName: String!
+  numberOfCards: Int
+  score: Int
+}
+
+type ReturnGameDTO {
+  name: String!
+}
+
+type Card {
+  color: String
+  digit: Int
+  type: String!
+}
+
+input CreatePlayerHandDTO{
+  playerName : String!
+  gameName : String!
+}
+
+input CreateGameDTO {
+  name: String!
+}
+
+input GameNameDTO {
+  name : String!
+}
+
+input TakeCardsDTO {
+  gameName: String!
+  playerName: String!
+  numberOfCards: Int!
+}
+
+input PlayCardDTO {
+  gameName: String!
+  index: Int!
+}
+
+type Query {
+  get_games: [ReturnGameDTO!]!
+  get_pending_games: [ReturnGameDTO!]!
+  get_game_player_hands(gameName: GameNameDTO!): [PlayerHand!]!
+}
+
+type RoundWon {
+  isFinished: Boolean!
+  winner: String!
+  winnerScore: Int!
+}
+
+type Mutation {
+  create_game(game: CreateGameDTO) : ReturnGameDTO
+  create_player_hand(playerHand: CreatePlayerHandDTO!): PlayerHand!
+  start_game(gameName: GameNameDTO!): Game!
+  take_cards(takeCardsDTO: TakeCardsDTO!): [Card!]!
+  play_card(playCard: PlayCardDTO): Boolean!
+  round_won(gameName: String!): RoundWon!
+}
+
+type Subscription {
+  pending_games_updated: [ReturnGameDTO!]!,
+  game_player_hands_updated(gameName: String!): [PlayerHandSubscription!]!
+  game_started(gameName: String!): Game!
+  current_player_updated(gameName: String!): String!
+  discard_pile_updated(gameName: String!): [Card!]!
+  round_won(gameName: String!): RoundWon!
+}
