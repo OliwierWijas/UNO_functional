@@ -10,7 +10,7 @@ import type { Dispatch, State } from '../stores/stores'
 const Start = () => {
   const [newGameName, setNewGameName] = useState("");
   const [playerName, setPlayerName] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
   const dispatch: Dispatch = useDispatch();

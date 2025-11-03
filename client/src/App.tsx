@@ -6,6 +6,7 @@ import { useDispatch } from 'react-redux';
 import { useEffect } from 'react';
 import InitialGamesThunk from './thunks/InitialGamesThunk.ts';
 import type { Dispatch } from './stores/stores';
+import LiveUpdatePendingGames from './thunks/LiveUpdatePendingGames.ts';
 
 const router = createBrowserRouter([
   {
@@ -23,9 +24,10 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-    const dispatch: Dispatch = useDispatch()
-    useEffect(() => {
+  const dispatch: Dispatch = useDispatch()
+  useEffect(() => {
       dispatch(InitialGamesThunk())
+      dispatch(LiveUpdatePendingGames)
   }, [])
 
   return <RouterProvider router={router} />;
