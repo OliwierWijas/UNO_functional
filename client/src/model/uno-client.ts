@@ -1,23 +1,13 @@
-import { ApolloClient, gql, InMemoryCache, type DocumentNode, split, HttpLink, concat } from "@apollo/client/core";
+import { ApolloClient, gql, InMemoryCache, type DocumentNode, HttpLink, ApolloLink } from "@apollo/client/core";
 import { getMainDefinition } from '@apollo/client/utilities';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { createClient } from 'graphql-ws';
-import { type Game } from "domain/src/model/game";
-import { type PlayerHand } from "domain/src/model/playerHand";
-import type { Type } from "domain/src/model/types";
-import type { Card } from "domain/src/model/card";
-import { mapCard } from "domain/src/utils/card_mapper"
-
-export type SimpleGameDTO = {
-  name: string
-}
-
-export type PlayerHandSubscription = {
-  playerName: string,
-  numberOfCards: number,
-  score: number
-}
-
+import * as _ from 'lodash/fp'
+import { subscriptionsRxJS } from "./rxjs";
+import type { Game } from "../slices/ongoing_games_slice";
+import type { SimpleGameDTO } from "../slices/pending_games_slice";
+import { map_card } from "domain/src/utils/card_mapper"
+import type { Card } from "domain/src/model/types";
 
 const wsLink = new GraphQLWsLink(createClient({
   url: 'ws://localhost:4000/graphql',
@@ -27,7 +17,7 @@ const httpLink = new HttpLink({
   uri: 'http://localhost:4000/graphql'
 })
 
-const splitLink = split(
+const splitLink = ApolloLink.split(
   ({ query }) => {
     const definition = getMainDefinition(query)
     return (
@@ -44,17 +34,85 @@ const apolloClient = new ApolloClient({
   cache: new InMemoryCache()
 })
 
-async function query(query: DocumentNode, variables?: Object): Promise<any> {
-  const result = await apolloClient.query({ query, variables, fetchPolicy: 'network-only' })
+async function query(query: DocumentNode, variables?: object): Promise<unknown> {
+  const result = await apolloClient.query({ query, variables, fetchPolicy: 'network-only' })    
   return result.data
+}  
+
+async function mutate(mutation: DocumentNode, variables?: object): Promise<unknown> {
+  const result = await apolloClient.mutate({ mutation, variables, fetchPolicy: 'network-only' })    
+  return result.data
+}  
+
+// Subscription RxJS methods - following your teacher's pattern
+export async function pendingGamesRxJS() {
+  const pendingGamesSubscription = gql`
+    subscription PendingGamesSubscription {
+      pending_games_updated {
+        name
+      }
+    }`
+  
+  const extractor = (data: { pending_games_updated: SimpleGameDTO[] }) => data.pending_games_updated
+  return subscriptionsRxJS(apolloClient, pendingGamesSubscription, extractor)
 }
 
-async function mutate(mutation: DocumentNode, variables?: Object): Promise<any> {
-  const result = await apolloClient.mutate({ mutation, variables, fetchPolicy: 'network-only' })
-  return result.data
+export async function gameStartedRxJS(gameName: string) {
+  const gameStartedSubscription = gql`
+    subscription GameStartedSubscription($gameName: String!) {
+      game_started(gameName: $gameName) {
+        name
+        state
+        playerHands {
+          playerName
+          cards
+          score
+        }
+      }
+    }`
+
+  const extractor = (data: { game_started: Game }) => data.game_started
+  return subscriptionsRxJS(apolloClient, gameStartedSubscription, extractor, { gameName })
 }
 
-//Queries
+export async function currentPlayerRxJS(gameName: string) {
+  const currentPlayerSubscription = gql`
+    subscription CurrentPlayerUpdated($gameName: String!) {
+      current_player_updated(gameName: $gameName)
+    }`
+
+  const extractor = (data: { current_player_updated: string }) => data.current_player_updated
+  return subscriptionsRxJS(apolloClient, currentPlayerSubscription, extractor, { gameName })
+}
+
+export async function discardPileRxJS(gameName: string) {
+  const discardPileSubscription = gql`
+    subscription DiscardPileUpdated($gameName: String!) {
+      discard_pile_updated(gameName: $gameName) {
+        color
+        digit
+        type
+      }
+    }`
+
+  const extractor = (data: { discard_pile_updated: any[] }) => data.discard_pile_updated.map(map_card)
+  return subscriptionsRxJS(apolloClient, discardPileSubscription, extractor, { gameName })
+}
+
+export async function roundWonRxJS(gameName: string) {
+  const roundWonSubscription = gql`
+    subscription RoundWonSubscription($gameName: String!) {
+      round_won(gameName: $gameName) {
+        isFinished
+        winner
+        winnerScore
+      }
+    }`
+
+  const extractor = (data: { round_won: { isFinished: boolean; winner: string; winnerScore: number } }) => data.round_won
+  return subscriptionsRxJS(apolloClient, roundWonSubscription, extractor, { gameName })
+}
+
 export async function get_pending_games(): Promise<SimpleGameDTO[]> {
   const response = await query(gql`
     query GetPendingGames {
@@ -62,69 +120,26 @@ export async function get_pending_games(): Promise<SimpleGameDTO[]> {
         name
       }
     }
-  `);
-  const result = response.get_pending_games;
-  return result.map((game: any) => ({
-    name: game.name
-  })) as SimpleGameDTO[];
+  `) as { get_pending_games: SimpleGameDTO[] }
+  
+  return response.get_pending_games
 }
 
-export async function get_game_player_hands(gameName: string): Promise<PlayerHand[]> {
-  const response = await query(gql`
-    query GetGamePlayerHands($gameName: GameNameDTO!) {
-      get_game_player_hands(gameName: $gameName) {
-        playerName
-        cards
-        score
-      }
-    }
-  `, {
-    gameName: { name: gameName }
-  });
-  const result = response.get_game_player_hands;
-  return result as PlayerHand[];
-}
-// Mutations
 export async function create_game(name: string): Promise<Game> {
   const response = await mutate(gql`
-    mutation create_game($name: String!) {
+    mutation CreateGame($name: String!) {
       create_game(game: { name: $name }) {
         name
       }
     }
-  `, { name });
+  `, { name }) as { create_game: Game }
 
-  const result = response.create_game;
-
-  return { name: result.name } as Game;
-}
-
-export async function create_player_hand(playerName: string, gameName: string): Promise<PlayerHand> {
-  const response = await mutate(gql`
-    mutation CreatePlayerHand($playerName: String!, $gameName: String!) {
-      create_player_hand(playerHand: {
-        playerName: $playerName,
-        gameName: $gameName
-      }) {
-        playerName
-        cards
-        score
-      }
-    }
-  `, { playerName, gameName });
-
-  const result = response.create_player_hand;
-
-  return {
-    playerName: result.playerName,
-    playerCards: result.cards || [],
-    score: result.score || 0
-  } as PlayerHand;
+  return response.create_game
 }
 
 export async function start_game(gameName: string): Promise<Game> {
   const response = await mutate(gql`
-    mutation StartGame($gameName: GameNameDTO!) {
+    mutation StartGame($gameName: String!) {
       start_game(gameName: $gameName) {
         name
         state
@@ -135,15 +150,12 @@ export async function start_game(gameName: string): Promise<Game> {
         }
       }
     }
-  `, {
-    gameName: { name: gameName }
-  });
+  `, { gameName }) as { start_game: Game }
 
-  const result = response.start_game;
-  return result as Game;
+  return response.start_game
 }
 
-export async function take_cards(gameName: string, playerName: string, numberOfCards: number): Promise<Card<Type>[]> {
+export async function take_cards(gameName: string, playerName: string, numberOfCards: number): Promise<Card[]> {
   const response = await mutate(gql`
     mutation TakeCards($gameName: String!, $playerName: String!, $numberOfCards: Int!) {
       take_cards(takeCardsDTO: {
@@ -156,22 +168,16 @@ export async function take_cards(gameName: string, playerName: string, numberOfC
         type
       }
     }
-  `, {
-    gameName,
-    playerName,
-    numberOfCards
-  });
+  `, { gameName, playerName, numberOfCards }) as { take_cards: any[] }
 
-  if (response.take_cards) {
-    return response.take_cards.map(mapCard);
+  if (!response.take_cards) {
+    throw new Error("Server Error: No cards returned")
   }
 
-  throw new Error("Server Error: " + response.error)
+  return response.take_cards.map(map_card)
 }
 
 export async function play_card(gameName: string, index: number): Promise<boolean> {
-  console.log(gameName)
-  console.log(index)
   const response = await mutate(gql`
     mutation PlayCard($gameName: String!, $index: Int!) {
       play_card(playCard: {
@@ -179,201 +185,7 @@ export async function play_card(gameName: string, index: number): Promise<boolea
         index: $index,
       })
     }
-  `, {
-    gameName,
-    index
-  });
+  `, { gameName, index }) as { play_card: boolean }
 
-  return response.play_card === true;
-}
-
-export async function round_won(gameName: string): Promise<{ isFinished: boolean; winner: string; winnerScore: number }> {
-  const response = await mutate(gql`
-    mutation RoundWon($gameName: String!) {
-      round_won(gameName: $gameName) {
-        isFinished
-        winner
-        winnerScore
-      }
-    }
-  `, { gameName });
-  return response.round_won;
-}
-
-
-// Subscriptions
-export async function onPendingGamesUpdated(subscriber: (games: SimpleGameDTO[]) => void) {
-  const pendingGamesSubscription = gql`subscription PendingGamesSubscription {
-    pending_games_updated {
-      name
-    }
-  }`
-  const observable = apolloClient.subscribe({ query: pendingGamesSubscription })
-  observable.subscribe({
-    next({data}) {
-      if (data && data.pending_games_updated) {
-        const pendingGames: SimpleGameDTO[] = data.pending_games_updated
-        subscriber(pendingGames)
-      }
-    },
-    error(err: any) {
-      console.error(err)
-    }
-  })
-}
-
-export async function onGamePlayerHandsUpdated(
-  gameName: string,
-  subscriber: (playerHands: PlayerHandSubscription[]) => void
-) {
-  const gamePlayerHandsSubscription = gql`
-    subscription GamePlayerHandsSubscription($gameName: String!) {
-      game_player_hands_updated(gameName: $gameName) {
-        playerName
-        numberOfCards
-        score
-      }
-    }
-  `;
-
-  const observable = apolloClient.subscribe({
-    query: gamePlayerHandsSubscription,
-    variables: { gameName }
-  });
-
-  observable.subscribe({
-    next({ data }) {
-      if (data && data.game_player_hands_updated) {
-        const playerHands: PlayerHandSubscription[] = data.game_player_hands_updated;
-        subscriber(playerHands);
-      }
-    },
-    error(err: any) {
-      console.error('Game player hands subscription error:', err);
-    }
-  });
-}
-
-export async function onGameStarted(
-  gameName: string,
-  subscriber: (game: Game) => void
-) {
-  const gameStartedSubscription = gql`
-    subscription GameStartedSubscription($gameName: String!) {
-      game_started(gameName: $gameName) {
-        name
-        state
-        playerHands {
-          playerName
-          cards
-          score
-        }
-      }
-    }
-  `;
-
-  const observable = apolloClient.subscribe({
-    query: gameStartedSubscription,
-    variables: { gameName }
-  });
-
-  observable.subscribe({
-    next({ data }) {
-      if (data && data.game_started) {
-        const game: Game = data.game_started;
-        subscriber(game);
-      }
-    },
-    error(err: any) {
-      console.error('Game started subscription error:', err);
-    }
-  });
-}
-
-export async function onCurrentPlayerUpdated(
-  gameName: string,
-  subscriber: (playerName: string) => void
-) {
-  const currentPlayerSubscription = gql`
-    subscription CurrentPlayerUpdated($gameName: String!) {
-      current_player_updated(gameName: $gameName)
-    }
-  `;
-
-  const observable = apolloClient.subscribe({
-    query: currentPlayerSubscription,
-    variables: { gameName }
-  });
-
-  observable.subscribe({
-    next({ data }) {
-      if (data && data.current_player_updated) {
-        subscriber(data.current_player_updated);
-      }
-    },
-    error(err) {
-      console.error("Current player subscription error:", err);
-    }
-  });
-}
-
-export async function onDiscardPileUpdated(
-  gameName: string,
-  subscriber: (cards: Card<Type>[]) => void
-) {
-  const discardPileSubscription = gql`
-    subscription DiscardPileUpdated($gameName: String!) {
-      discard_pile_updated(gameName: $gameName) {
-        color
-        digit
-        type
-      }
-    }
-  `;
-
-  const observable = apolloClient.subscribe({
-    query: discardPileSubscription,
-    variables: { gameName }
-  });
-
-  observable.subscribe({
-    next({ data }) {
-      if (data && data.discard_pile_updated) {
-        const cards = data.discard_pile_updated.map(mapCard);
-        subscriber(cards);
-      }
-    },
-    error(err: any) {
-      console.error("Discard pile subscription error:", err);
-    }
-  });
-}
-
-export async function onRoundWon(
-  gameName: string,
-  subscriber: (data: { isFinished: boolean; winner: string; winnerScore: number }) => void
-) {
-  const roundWonSubscription = gql`
-    subscription RoundWonSubscription($gameName: String!) {
-      round_won(gameName: $gameName) {
-        isFinished
-        winner
-        winnerScore
-      }
-    }
-  `;
-
-  const observable = apolloClient.subscribe({
-    query: roundWonSubscription,
-    variables: { gameName },
-  });
-
-  observable.subscribe({
-    next({ data }) {
-      if (data && data.round_won) subscriber(data.round_won);
-    },
-    error(err: any) {
-      console.error("Round won subscription error:", err);
-    },
-  });
+  return response.play_card
 }

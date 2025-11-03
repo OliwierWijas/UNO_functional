@@ -1,147 +1,3 @@
-<script setup lang="ts">
-import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
-import * as api from "../model/uno-client"
-import { onMounted } from "vue";
-import { usePendingGamesStore } from "@/stores/PendingGamesStore";
-
-const pendingGamesStore = usePendingGamesStore();
-const newGameName = ref("");
-const router = useRouter();
-const playerName = ref("");
-const isLoading = ref(true);
-
-const canStart = computed(() => playerName.value.trim().length > 0 && newGameName.value.trim().length > 0);
-const canJoin = computed(() => playerName.value.trim().length > 0);
-
-async function createGame() {
-  try {
-    await api.create_game(newGameName.value);
-    await api.create_player_hand(playerName.value, newGameName.value);
-    await router.push({
-      name: 'Game',
-      query: {
-        playerName: playerName.value,
-        gameName: newGameName.value
-      }
-    });
-  } catch (error) {
-    console.error('Error in createGame:', error);
-  }
-}
-
-async function joinGame(gameName: string) {
-    try {
-    await api.create_player_hand(playerName.value, gameName);
-    await router.push({
-      name: 'Game',
-      query: {
-        playerName: playerName.value,
-        gameName: gameName
-      }
-    });
-  } catch (error) {
-    console.error('Error in joinGame:', error);
-    alert("Game has to much players!");
-  }
-}
-async function loadInitialGames() {
-  try {
-    const games = await api.get_pending_games();
-    pendingGamesStore.upsert(games);
-  } catch (error) {
-    console.error('Error loading initial games:', error);
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-
-function liveUpdateGames() {
-  api.onPendingGamesUpdated((games) => {
-    pendingGamesStore.upsert(games);
-  });
-}
-  onMounted(async () => {
-    await loadInitialGames();
-    liveUpdateGames();
-  })
-</script>
-
-<template>
-  <div class="start-page">
-    <h1 class="title">UNO</h1>
-    <div class="player-input-container">
-          <input
-            v-model="playerName"
-            type="text"
-            placeholder="Enter your name"
-            class="name-input"
-          />
-        </div>
-    <div class="content-container">
-      <div class="games-section">
-        <h2 class="section-title">Available Games</h2>
-        <div v-if="isLoading" class="loading-container">
-          <p>Loading games...</p>
-        </div>
-        <div class="table-container" v-if="pendingGamesStore.games.length > 0">
-          <table class="games-table">
-            <thead>
-              <tr>
-                <th>Game Name</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="game in pendingGamesStore.games" :key="game.name">
-                <td>{{ game.name }}</td>
-                <td>
-                  <button
-                    class="join-btn"
-                    :disabled="!canJoin"
-                    @click="joinGame(game.name)"
-                  >
-                    Join Game
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="no-games" v-else>
-          <p>No available games. Create one below!</p>
-        </div>
-      </div>
-
-      <!-- Create Game Section -->
-      <div class="create-section">
-        <h2 class="section-title">Create New Game</h2>
-
-        <div class="create-form">
-          <input
-            v-model="newGameName"
-            type="text"
-            placeholder="Enter game name"
-            class="name-input"
-            @keyup.enter="createGame"
-          />
-
-          <button
-            class="create-btn"
-            :disabled="!canStart"
-            @click="createGame"
-          >
-            Create Game
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
 
 .start-page {
@@ -361,6 +217,12 @@ function liveUpdateGames() {
   font-style: italic;
 }
 
+.loading-container {
+  text-align: center;
+  padding: 2rem;
+  color: #64748b;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .content-container {
@@ -378,4 +240,3 @@ function liveUpdateGames() {
     padding: 16px;
   }
 }
-</style>
