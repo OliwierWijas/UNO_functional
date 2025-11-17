@@ -4,7 +4,7 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { createClient } from 'graphql-ws';
 import * as _ from 'lodash/fp'
 import { subscriptionsRxJS } from "./rxjs";
-import type { Game } from "../slices/ongoing_games_slice";
+import type { Game, PlayerHand } from "../slices/ongoing_games_slice";
 import type { SimpleGameDTO } from "../slices/pending_games_slice";
 import { map_card } from "domain/src/utils/card_mapper"
 import type { Card } from "domain/src/model/types";
@@ -135,6 +135,26 @@ export async function create_game(name: string): Promise<Game> {
   `, { name }) as { create_game: Game }
 
   return response.create_game
+}
+
+export async function create_player_hand(playerName: string, gameName: string): Promise<PlayerHand> {
+  const response = await mutate(gql`
+    mutation CreatePlayerHand($playerName: String!, $gameName: String!) {
+      create_player_hand(playerHand: {
+        playerName: $playerName,
+        gameName: $gameName
+      }) {
+        playerName
+        cards
+        score
+      }
+    }
+  `, { playerName, gameName }) as { create_player_hand: PlayerHand };
+
+  let x = response.create_player_hand
+
+  console.log(x)
+  return x
 }
 
 export async function start_game(gameName: string): Promise<Game> {

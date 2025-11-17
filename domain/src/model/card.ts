@@ -1,6 +1,6 @@
 // card_factories.ts
 import _ from 'lodash';
-import { Map, Record } from 'immutable';
+import { Record } from 'immutable';
 import type { Color, Digit, Type, Card } from "./types"
 
 interface NumberedCardProps {

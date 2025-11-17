@@ -3,10 +3,9 @@ import { CreateGameDTO, CreatePlayerHandDTO, DiscardPileSubscription, GamesNameD
 import { ServerModel } from "./servermodel"
 import type { PlayerHand } from "domain/src/model/playerHand"
 import { type Game } from "domain/src/model/Game"
-import { Card } from "domain/src/model/card"
-import { Type } from "domain/src/model/types"
+import { Card } from "domain/src/model/types"
 import { Round } from "domain/src/model/round"
-import { RulesHelper } from "domain/src/utils/rules_helper"
+import { calculate_score } from "domain/src/utils/rules_helper"
 
 export interface Broadcaster {
   sendPendingGames: (message: CreateGameDTO[]) => Promise<void>,
@@ -25,7 +24,7 @@ export type API = {
   create_player_hand : (dto : CreatePlayerHandDTO)  => Promise<ServerResponse<PlayerHand, ServerError>>
   get_game_player_hands : (gameName: GamesNameDTO) => Promise<ServerResponse<PlayerHand[], ServerError>>
   start_game: (gameName: GamesNameDTO) => Promise<ServerResponse<Game, ServerError>>
-  take_cards: (gameName: string, playerName: string, number: number) => Promise<ServerResponse<Card<Type>[], ServerError>>
+  take_cards: (gameName: string, playerName: string, number: number) => Promise<ServerResponse<Card[], ServerError>>
   play_card: (gameName: string, index: number) => Promise<ServerResponse<boolean, ServerError>>
   round_won: (gameName: string) => Promise<ServerResponse<void, ServerError>>;
 }
@@ -70,15 +69,23 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
   }
 
   async function create_player_hand(dto : CreatePlayerHandDTO){
-    const result = await server.create_player_hand(dto);
+    try {
+      console.log(dto)
+      const result = await server.create_player_hand(dto);
 
-    const playerHands = await server.get_games_player_hands({ name: dto.gameName })
-    await playerHands.process(hands => {
-      const subscriptionHands = hands.map(mapPlayerHandToSubscription)
-      return broadcastPlayerHands(dto.gameName, subscriptionHands);
-    })
-  
-    return result;
+      const playerHands = await server.get_games_player_hands({ name: dto.gameName })
+      await playerHands.process(hands => {
+        const subscriptionHands = hands.map(mapPlayerHandToSubscription)
+        return broadcastPlayerHands(dto.gameName, subscriptionHands);
+      })
+
+      console.log(result)
+    
+      return result;
+    } catch (e) {
+      console.log(e)
+    }
+    throw new Error();
   }
 
   async function get_game_player_hands(gameName : GamesNameDTO){
@@ -121,26 +128,26 @@ async function play_card(gameName: string, index: number) {
     const gamesRes = await server.get_games();
     await gamesRes.process(async (allGames) => {
       const targetGame = allGames.find(g => g.name === gameName);
-      if (!targetGame || !targetGame.currentRound) return;
+      if (!targetGame || !targetGame.rounds[targetGame.currentRoundIndex]) return;
 
       // Check if any player has 0 cards
-      const playersWithNoCards = targetGame.playerHands.filter(p => p.playerCards.length === 0);
+      const playersWithNoCards = targetGame.playerHands.filter(p => p.cards.length === 0);
       if (playersWithNoCards.length > 0) {
         const winner = playersWithNoCards[0];
         
         // Calculate score for remaining players
-        const remainingPlayers = targetGame.playerHands.filter(p => p.playerCards.length > 0);
-        const winnerScore = RulesHelper.calculateScore(remainingPlayers);
+        const remainingPlayers = targetGame.playerHands.filter(p => p.cards.length > 0);
+        const winnerScore = calculate_score(remainingPlayers);
         
         // Broadcast round won
-        await broadcaster.sendRoundWon(gameName, targetGame.currentRound);
+        await broadcaster.sendRoundWon(gameName, targetGame.rounds[targetGame.currentRoundIndex]);
       }
     });
 
     // update discard pile
     const discardPile = await server.get_discard_pile(gameName)
     await discardPile.process(discardPile => {
-      const mappedCards: DiscardPileSubscription[] = discardPile.pile.map(card => ({
+      const mappedCards: DiscardPileSubscription[] = discardPile.cards.map(card => ({
         color: 'color' in card ? card.color : null,
         digit: card.type === 'NUMBERED' ? card.number : null,
         type: card.type
@@ -169,11 +176,11 @@ async function round_won(gameName: string): Promise<ServerResponse<void, ServerE
 
   return gamesRes.flatMap(async (all) => {
     const game = all.find((g: any) => g.name === gameName);
-    if (!game || !game.currentRound) {
+    if (!game || !game.rounds[game.currentRoundIndex]) {
       return ServerResponse.error<ServerError>({ type: "Not Found", key: gameName });
     }
 
-    const round = game.currentRound;
+    const round = game.rounds[game.currentRoundIndex];
     const result = await server.round_won(gameName, round);
 
     await result.process(async () => {
@@ -204,7 +211,7 @@ async function round_won(gameName: string): Promise<ServerResponse<void, ServerE
 export function mapPlayerHandToSubscription(hand: PlayerHand): PlayerHandSubscription {
   return {
     playerName: hand.playerName,
-    numberOfCards: hand.playerCards.length,
+    numberOfCards: hand.cards.length,
     score: hand.score
   };
 }

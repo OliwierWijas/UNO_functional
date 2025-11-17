@@ -1,131 +1,133 @@
 // round.ts
 import _ from 'lodash';
-import { List, Record } from 'immutable';
-import type { Card } from './types'
 import { draw_cards, type Deck } from './deck'
 import { add_score, play_card, take_cards, type PlayerHand } from './playerHand'
 import type { DiscardPile } from './discardPile'
 import { can_be_put_on_top, calculate_score, has_score_500 } from '../utils/rules_helper'
 import { add_card, discard_pile, get_top_card } from './discardPile'
 
-interface RoundProps {
-  playerHands: List<PlayerHand>
-  deck: Deck
-  discardPile: DiscardPile
-  currentPlayerIndex: number
-  isFinished: boolean
+export interface Round {
+  readonly playerHands: PlayerHand[];
+  readonly deck: Deck;
+  readonly discardPile: DiscardPile;
+  readonly currentPlayerIndex: number;
+  readonly isFinished: boolean;
 }
-
-const RoundRecord = Record<RoundProps>({
-  playerHands: List(),
-  deck: null as any,
-  discardPile: discard_pile(),
-  currentPlayerIndex: 0,
-  isFinished: false
-});
-
-export type Round = ReturnType<typeof RoundRecord>;
 
 export function round(hands: PlayerHand[], deck: Deck): Round {
-  return RoundRecord({
-    playerHands: List(hands),
+  return {
+    playerHands: hands,
     deck,
+    discardPile: discard_pile(),
     currentPlayerIndex: 0,
     isFinished: false
-  });
+  };
 }
 
-export function next_player(round: Round): Round {
-  const nextIndex = (round.currentPlayerIndex + 1) % round.playerHands.size;
-  return round.set('currentPlayerIndex', nextIndex);
+export function next_player(r: Round): Round {
+  const nextIndex = (r.currentPlayerIndex + 1) % r.playerHands.length;
+
+  return {
+    ...r,
+    currentPlayerIndex: nextIndex
+  };
 }
 
-export function put_card(round: Round, playerIndex: number, cardIndex: number): Round {
-  const topCard = get_top_card(round.discardPile);
-  
+export function put_card(
+  r: Round,
+  playerIndex: number,
+  cardIndex: number
+): Round {
+  const topCard = get_top_card(r.discardPile);
+
   // Validate player index
-  if (!_.inRange(playerIndex, 0, round.playerHands.size)) {
+  if (!_.inRange(playerIndex, 0, r.playerHands.length)) {
     throw new Error(`Invalid player index: ${playerIndex}`);
   }
-  
-  const currentHand = round.playerHands.get(playerIndex);
-  if (!currentHand) {
-    throw new Error(`Player hand not found at index: ${playerIndex}`);
-  }
-  
+
+  const currentHand = r.playerHands[playerIndex];
+  if (!currentHand) throw new Error(`No hand at index: ${playerIndex}`);
+
   const [newHand, playedCard] = play_card(currentHand, cardIndex);
-  
+
   if (!can_be_put_on_top(topCard, playedCard)) {
     throw new Error("Invalid card play");
   }
 
-  let updatedRound: Round = round
-    .update('playerHands', hands => hands.set(playerIndex, newHand))
-    .update('discardPile', pile => add_card(pile, playedCard));
+  // Update round state immutably
+  let updated = {
+    ...r,
+    playerHands: r.playerHands.map((hand, idx) =>
+      idx === playerIndex ? newHand : hand
+    ),
+    discardPile: add_card(r.discardPile, playedCard)
+  };
 
-  // Check if player won
-  if (newHand.cards.size === 0) {
-    const score = calculate_score(updatedRound.playerHands.toArray());
-    updatedRound = updatedRound
-      .update('playerHands', hands => 
-        hands.map((hand, idx) => 
-          idx === playerIndex ? add_score(hand, score) : hand
-        )
-      )
-      .set('isFinished', true);
-    
-    return updatedRound;
+  if (newHand.cards.length === 0) {
+    const score = calculate_score(updated.playerHands);
+
+    const updatedHands = updated.playerHands.map((hand, idx) =>
+      idx === playerIndex ? add_score(hand, score) : hand
+    );
+
+    return {
+      ...updated,
+      playerHands: updatedHands,
+      isFinished: true
+    };
   }
 
   // Handle special cards
   switch (playedCard.type) {
-    case 'REVERSE':
-      updatedRound = updatedRound
-        .update('playerHands', hands => hands.reverse())
-        .update('currentPlayerIndex', idx => 
-          (updatedRound.playerHands.size - 1 - idx) % updatedRound.playerHands.size
-        );
-      updatedRound = next_player(updatedRound);
-      break;
+    case 'REVERSE': {
+      const reversedHands = [...updated.playerHands].reverse();
+
+      const newIndex =
+        (reversedHands.length - 1 - updated.currentPlayerIndex) %
+        reversedHands.length;
+
+      updated = {
+        ...updated,
+        playerHands: reversedHands,
+        currentPlayerIndex: newIndex
+      };
+
+      return next_player(updated);
+    }
 
     case 'SKIP':
-      updatedRound = next_player(next_player(updatedRound));
-      break;
+      return next_player(next_player(updated));
 
     case 'DRAW2':
-      updatedRound = handle_draw_card(next_player(updatedRound), 2);
-      break;
+      return handle_draw_card(next_player(updated), 2);
 
     case 'DRAW4':
-      updatedRound = handle_draw_card(next_player(updatedRound), 4);
-      break;
+      return handle_draw_card(next_player(updated), 4);
 
     case 'WILD':
     case 'NUMBERED':
-      updatedRound = next_player(updatedRound);
-      break;
+      return next_player(updated);
   }
 
-  return updatedRound;
+  return updated;
 }
 
-function handle_draw_card(round: Round, count: number): Round {
-  const currentPlayerIdx = round.currentPlayerIndex;
-  
-  // Validate current player index
-  if (!_.inRange(currentPlayerIdx, 0, round.playerHands.size)) {
-    throw new Error(`Invalid current player index: ${currentPlayerIdx}`);
+function handle_draw_card(r: Round, count: number): Round {
+  const idx = r.currentPlayerIndex;
+
+  if (!_.inRange(idx, 0, r.playerHands.length)) {
+    throw new Error(`Invalid current player index: ${idx}`);
   }
-  
-  const currentHand = round.playerHands.get(currentPlayerIdx);
-  if (!currentHand) {
-    throw new Error(`Player hand not found at index: ${currentPlayerIdx}`);
-  }
-  
-  const [newDeck, drawnCards] = draw_cards(round.deck, count);
-  const updatedHand = take_cards(currentHand, drawnCards);
-  
-  return round
-    .set('deck', newDeck)
-    .update('playerHands', hands => hands.set(currentPlayerIdx, updatedHand));
+
+  const hand = r.playerHands[idx];
+  const [newDeck, drawn] = draw_cards(r.deck, count);
+  const newHand = take_cards(hand, drawn);
+
+  return {
+    ...r,
+    deck: newDeck,
+    playerHands: r.playerHands.map((h, i) =>
+      i === idx ? newHand : h
+    )
+  };
 }

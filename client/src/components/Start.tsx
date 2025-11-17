@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import createGameThunk from '../thunks/CreateGameThunk';
-import initialGamesThunk from '../thunks/InitialGamesThunk';
+import joinGameThunk from '../thunks/JoinGameThunk';
 import './styles/Start.css';
 import type { PendingGamesState } from '../slices/pending_games_slice';
 import type { Dispatch, State } from '../stores/stores'
@@ -34,6 +34,19 @@ const Start = () => {
       dispatch(createGameThunk(newGameName, navigate));
     }
   }, [newGameName, navigate, canStart, dispatch]);
+
+  const joinGame = useCallback((gameName: string) => {
+    if (canJoin) {
+      dispatch(joinGameThunk(gameName, playerName));
+      navigate('/game', { 
+            state: { 
+              playerName: playerName,
+              gameName: gameName
+            }
+          });
+    }
+  }, [playerName, dispatch]);
+
 
   /*const joinGame = useCallback((gameName: string) => {
     if (canJoin) {
@@ -101,7 +114,7 @@ const Start = () => {
                         <button
                           className="join-btn"
                           disabled={!canJoin}
-                          onClick={() => /*joinGame(game.name)*/ console.log("join")}
+                          onClick={() => joinGame(game.name)}
                         >
                           Join Game
                         </button>

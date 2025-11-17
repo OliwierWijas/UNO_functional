@@ -13,6 +13,12 @@ export type PlayerHandSubscription = {
   score: number
 }
 
+export type PlayerHand = {
+  playerName: string,
+  cards: string[],
+  score: number
+}
+
 export type OngoingGamesState = Readonly<Game[]>
 
 export const game = (name: string, state: OngoingGamesState): Game | undefined => 

@@ -34,7 +34,7 @@ export function can_be_put_on_top(topCard: Card | undefined, chosenCard: Card): 
 }
 
 export function can_say_uno(playerHand: PlayerHand): boolean {
-  return playerHand.cards.size === 1
+  return playerHand.cards.length === 1
 }
 
 export function calculate_score(hands: PlayerHand[]): number {

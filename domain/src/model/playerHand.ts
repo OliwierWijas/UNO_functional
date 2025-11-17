@@ -1,43 +1,59 @@
 import _ from 'lodash';
-import { List, Record } from 'immutable';
 import type { Card } from "./types"
 
-interface PlayerHandProps {
-  playerName: string
-  cards: List<Card>
-  score: number
+export interface PlayerHand {
+  playerName: string;
+  cards: Card[];
+  score: number;
 }
 
-const PlayerHandRecord = Record<PlayerHandProps>({
-  playerName: '',
-  cards: List(),
-  score: 0
-});
-
-export type PlayerHand = ReturnType<typeof PlayerHandRecord>;
-
 export function player_hand(name: string): PlayerHand {
-  return PlayerHandRecord({ playerName: name });
+  return {
+    playerName: name,
+    cards: [],
+    score: 0
+  };
 }
 
 export function take_cards(hand: PlayerHand, cards: Card[]): PlayerHand {
-  return hand.update('cards', currentCards => currentCards.concat(cards));
+  return {
+    ...hand,
+    cards: [...hand.cards, ...cards]
+  };
 }
 
-export function play_card(hand: PlayerHand, index: number): [PlayerHand, Card] {
-  const card = hand.cards.get(index);
+
+export function play_card(
+  hand: PlayerHand,
+  index: number
+): [PlayerHand, Card] {
+  const card = hand.cards[index];
   if (!card) {
     throw new Error(`Invalid card index: ${index}`);
   }
 
-  const newHand = hand.update('cards', cards => cards.delete(index));
-  return [newHand, card];
+  const newCards = hand.cards.filter((_, i) => i !== index);
+
+  return [
+    {
+      ...hand,
+      cards: newCards
+    },
+    card
+  ];
 }
 
 export function add_score(hand: PlayerHand, points: number): PlayerHand {
-  return hand.update('score', score => score + points);
+  return {
+    ...hand,
+    score: hand.score + points
+  };
 }
 
+
 export function reset_cards(hand: PlayerHand): PlayerHand {
-  return hand.set('cards', List());
+  return {
+    ...hand,
+    cards: []
+  };
 }
