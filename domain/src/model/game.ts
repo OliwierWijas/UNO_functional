@@ -7,40 +7,49 @@ import { State } from './types'
 
 export interface Game {
   name: string
-  playerHands: PlayerHand[];
   rounds: Round[];
   currentRoundIndex: number
   state: State
 }
 
-export function game(name: string): Game {
+export function game(name: string, initialRound: Round): Game {
   return {
     name,
-    playerHands: [],
-    rounds: [],
-    currentRoundIndex: -1,
+    rounds: [initialRound],
+    currentRoundIndex: 0,
     state: "PENDING"
   };
 }
 
 export function join_game(g: Game, hand: PlayerHand): Game {
-  if (g.playerHands.length >= 4) {
+  const currentRound = g.rounds[g.currentRoundIndex];
+
+  if (currentRound.playerHands.length >= 4) {
     throw new Error("Too many players.");
   }
 
+  // Create updated round with new player hand
+  const updatedRound = {
+    ...currentRound,
+    playerHands: [...currentRound.playerHands, hand],
+  };
+
+  // Return updated game with updated rounds
   return {
     ...g,
-    playerHands: [...g.playerHands, hand]
+    rounds: g.rounds.map((r, idx) =>
+      idx === g.currentRoundIndex ? updatedRound : r
+    ),
   };
 }
 
 
 export function start_game(g: Game, deck: Deck): Game {
-  if (g.playerHands.length < 2) {
+  if (g.rounds[g.currentRoundIndex].playerHands.length < 2) {
     throw new Error("Too few players.");
   }
 
-  const firstRound = round([...g.playerHands], deck);
+  const firstRound = round([...g.rounds[g.currentRoundIndex].playerHands], deck);
 
   return {
     ...g,
@@ -67,12 +76,11 @@ export function next_round(g: Game, deck: Deck): Game {
 
   if (!currentRound.isFinished) return g;
 
-  const resetHands = g.playerHands.map(reset_cards);
+  const resetHands = g.rounds[g.currentRoundIndex].playerHands.map(reset_cards);
   const nextRound = round([...resetHands], deck);
 
   return {
     ...g,
-    playerHands: resetHands,
     rounds: [...g.rounds, nextRound],
     currentRoundIndex: g.currentRoundIndex + 1
   };

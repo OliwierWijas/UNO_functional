@@ -1,9 +1,7 @@
-import type { NavigateFunction } from "react-router-dom";
 import * as api from "../model/uno-client";
 
-export default (gameName: string, navigate: NavigateFunction) => {
+export default (name: string, playerName: string) => {
   return async () => {
-    await api.create_game(gameName);
-    //navigate(`/game?playerName=${playerName}&gameName=${gameName}`);
+    await api.create_game(name, playerName);
   }
 }

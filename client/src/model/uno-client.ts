@@ -4,10 +4,11 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { createClient } from 'graphql-ws';
 import * as _ from 'lodash/fp'
 import { subscriptionsRxJS } from "./rxjs";
-import type { Game, PlayerHand } from "../slices/ongoing_games_slice";
 import type { SimpleGameDTO } from "../slices/pending_games_slice";
 import { map_card } from "domain/src/utils/card_mapper"
 import type { Card } from "domain/src/model/types";
+import type { Game } from "domain/src/model/game";
+import type { PlayerHand } from "domain/src/model/playerHand";
 
 const wsLink = new GraphQLWsLink(createClient({
   url: 'ws://localhost:4000/graphql',
@@ -55,6 +56,43 @@ export async function pendingGamesRxJS() {
   
   const extractor = (data: { pending_games_updated: SimpleGameDTO[] }) => data.pending_games_updated
   return subscriptionsRxJS(apolloClient, pendingGamesSubscription, extractor)
+}
+
+export async function ongoingGameRxJS(name: string) {
+  const ongoingGameSubscription = gql`
+    subscription OngoingGameSubscription($name: String!) {
+      ongoing_game_updated(name: $name) {
+        name
+        rounds {
+          playerHands {
+            playerName
+            cards {
+              color
+              digit
+              type
+            }
+            score
+          }
+          deck {
+            color
+            digit
+            type
+          }
+          discardPile {
+            color
+            digit
+            type
+          }
+          currentPlayerIndex
+          isFinished
+        }
+        currentRoundIndex
+        state
+      }
+    }`
+  
+  const extractor = (data: { ongoing_game_updated: Game }) => data.ongoing_game_updated
+  return subscriptionsRxJS(apolloClient, ongoingGameSubscription, extractor, { name })
 }
 
 export async function gameStartedRxJS(gameName: string) {
@@ -125,36 +163,25 @@ export async function get_pending_games(): Promise<SimpleGameDTO[]> {
   return response.get_pending_games
 }
 
-export async function create_game(name: string): Promise<Game> {
+export async function create_game(name: string, playerName: string): Promise<void> {
   const response = await mutate(gql`
-    mutation CreateGame($name: String!) {
-      create_game(game: { name: $name }) {
-        name
-      }
+    mutation CreateGame($name: String!, $playerName: String!) {
+      create_game(name: $name, playerName: $playerName)
     }
-  `, { name }) as { create_game: Game }
+  `, { name, playerName }) as { create_game: { message: string } }
 
-  return response.create_game
+  console.log(response.create_game)
 }
 
-export async function create_player_hand(playerName: string, gameName: string): Promise<PlayerHand> {
+export async function create_player_hand(playerName: string, gameName: string): Promise<void> {
+  console.log(playerName, gameName)
   const response = await mutate(gql`
     mutation CreatePlayerHand($playerName: String!, $gameName: String!) {
-      create_player_hand(playerHand: {
-        playerName: $playerName,
-        gameName: $gameName
-      }) {
-        playerName
-        cards
-        score
-      }
+      create_player_hand(playerName: $playerName, gameName: $gameName)
     }
-  `, { playerName, gameName }) as { create_player_hand: PlayerHand };
+  `, { playerName, gameName }) as { create_player_hand: string };
 
-  let x = response.create_player_hand
-
-  console.log(x)
-  return x
+  console.log(response.create_player_hand)
 }
 
 export async function start_game(gameName: string): Promise<Game> {

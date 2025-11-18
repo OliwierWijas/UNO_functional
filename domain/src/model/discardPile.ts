@@ -1,25 +1,24 @@
 import _ from 'lodash';
-import { List } from 'immutable';
 import type { Card } from './types';
 
 export type DiscardPile = Readonly<{
-  cards: List<Card>;
+  cards: Card[];
 }>
 
 export function discard_pile(): DiscardPile {
-  return { cards: List() };
+  return { cards: [] };
 }
 
 export function add_card(pile: DiscardPile, card: Card): DiscardPile {
   return {
-    cards: pile.cards.push(card)
+    cards: [...pile.cards, card]
   };
 }
 
 export function get_top_card(pile: DiscardPile): Card | undefined {
-  return pile.cards.last();
+  return pile.cards[pile.cards.length - 1];
 }
 
 export function reset_pile(pile: DiscardPile): DiscardPile {
-  return { cards: List() };
+  return { cards: [] };
 }

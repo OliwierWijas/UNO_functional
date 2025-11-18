@@ -1,13 +1,28 @@
 type Game {
   name: String!
+  rounds: [Round!]!
+  currentRoundIndex: Int!
   state: String!
-  playerHands: [PlayerHand]
 }
 
 type PlayerHand {
   playerName: String!
-  cards: [String]
+  cards: [Card]
   score: Int
+}
+
+type Card {
+  color: String
+  digit: Int
+  type: String!
+}
+
+type Round {
+  playerHands: [PlayerHand!]!
+  deck: [Card]!
+  discardPile: [Card!]!
+  currentPlayerIndex: Int!
+  isFinished: Boolean!
 }
 
 type PlayerHandSubscription {
@@ -18,12 +33,6 @@ type PlayerHandSubscription {
 
 type ReturnGameDTO {
   name: String!
-}
-
-type Card {
-  color: String
-  digit: Int
-  type: String!
 }
 
 input CreatePlayerHandDTO{
@@ -63,8 +72,9 @@ type RoundWon {
 }
 
 type Mutation {
-  create_game(game: CreateGameDTO) : ReturnGameDTO
-  create_player_hand(playerHand: CreatePlayerHandDTO!): PlayerHand!
+  create_game(name: String!, playerName: String!) : String!
+  create_player_hand(playerName: String!, gameName: String!): String!
+
   start_game(gameName: GameNameDTO!): Game!
   take_cards(takeCardsDTO: TakeCardsDTO!): [Card!]!
   play_card(playCard: PlayCardDTO): Boolean!
@@ -73,6 +83,8 @@ type Mutation {
 
 type Subscription {
   pending_games_updated: [ReturnGameDTO!]!,
+  ongoing_game_updated(name: String!): Game!,
+
   game_player_hands_updated(gameName: String!): [PlayerHandSubscription!]!
   game_started(gameName: String!): Game!
   current_player_updated(gameName: String!): String!

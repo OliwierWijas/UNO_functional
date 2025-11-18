@@ -25,34 +25,37 @@ async function startServer() {
   const store = new MemoryStore()
   const broadcaster = {
     async sendPendingGames(games: CreateGameDTO[]) {
-      pubsub.publish('PENDING_GAMES', { games })
+      await pubsub.publish('PENDING_GAMES', { games })
     },
-    async sendPlayerHands(gameName: string, playerHands: PlayerHandSubscription[]) {
-      await pubsub.publish(`GAME_PLAYER_HANDS_${gameName}`, { playerHands })
+    async sendOngoingGame(gameName: string, game: Game) {
+      await pubsub.publish(`ONGOING_GAME_${gameName}`, { game });
     },
-    async sendGameStarted(gameName: string, game: Game) {
-      await pubsub.publish(`GAME_STARTED_${gameName}`, { game });
-    },
-    async sendCurrentPlayer(gameName: string, playerName: string) {
-      await pubsub.publish(`CURRENT_PLAYER_${gameName}`, { playerName });
-    },
-    async sendDiscardPile(gameName: string, cards: DiscardPileSubscription[]): Promise<void> {
-      await pubsub.publish(`DISCARD_PILE_${gameName}`, { cards });
-    },
-    async sendRoundWon(gameName: string, round: Round) {
-  // Find the player with 0 cards
-  const winnerPlayer = round.playerHands.find(p => p.cards.length === 0);
+//     async sendPlayerHands(gameName: string, playerHands: PlayerHandSubscription[]) {
+//       await pubsub.publish(`GAME_PLAYER_HANDS_${gameName}`, { playerHands })
+//     },
+//     async sendGameStarted(gameName: string, game: Game) {
+//       await pubsub.publish(`GAME_STARTED_${gameName}`, { game });
+//     },
+//     async sendCurrentPlayer(gameName: string, playerName: string) {
+//       await pubsub.publish(`CURRENT_PLAYER_${gameName}`, { playerName });
+//     },
+//     async sendDiscardPile(gameName: string, cards: DiscardPileSubscription[]): Promise<void> {
+//       await pubsub.publish(`DISCARD_PILE_${gameName}`, { cards });
+//     },
+//     async sendRoundWon(gameName: string, round: Round) {
+//   // Find the player with 0 cards
+//   const winnerPlayer = round.playerHands.find(p => p.cards.length === 0);
   
-  // Calculate score of remaining cards
-  const remainingPlayers = round.playerHands.filter(p => p.cards.length > 0);
-  const winnerScore = calculate_score(remainingPlayers);
+//   // Calculate score of remaining cards
+//   const remainingPlayers = round.playerHands.filter(p => p.cards.length > 0);
+//   const winnerScore = calculate_score(remainingPlayers);
 
-  await pubsub.publish(`ROUND_WON_${gameName}`, {
-    isFinished: !!winnerPlayer,
-    winner: winnerPlayer?.playerName ?? "Unknown",
-    winnerScore: winnerScore
-  });
-}
+//   await pubsub.publish(`ROUND_WON_${gameName}`, {
+//     isFinished: !!winnerPlayer,
+//     winner: winnerPlayer?.playerName ?? "Unknown",
+//     winnerScore: winnerScore
+//   });
+// }
   }
   const api = create_api(broadcaster, store)
 

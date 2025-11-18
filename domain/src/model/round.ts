@@ -24,6 +24,21 @@ export function round(hands: PlayerHand[], deck: Deck): Round {
   };
 }
 
+export function findDealer(r: Round): Round {
+  if (!r.playerHands || r.playerHands.length < 1) {
+    throw new Error("Not enough players.");
+  }
+
+  const newPlayerHands = r.playerHands.map((hand, index) =>
+    index === r.currentPlayerIndex ? r.playerHands[0] : hand
+  );
+
+  return {
+    ...r,
+    playerHands: newPlayerHands
+  };
+}
+
 export function next_player(r: Round): Round {
   const nextIndex = (r.currentPlayerIndex + 1) % r.playerHands.length;
 

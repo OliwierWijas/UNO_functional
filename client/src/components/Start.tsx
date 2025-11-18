@@ -31,7 +31,8 @@ const Start = () => {
   const createGame = useCallback(() => {
     if (canStart) {
       // Dispatch the thunk
-      dispatch(createGameThunk(newGameName, navigate));
+      dispatch(createGameThunk(newGameName, playerName));
+      navigate(`/game?playerName=${playerName}&gameName=${newGameName}`);
     }
   }, [newGameName, navigate, canStart, dispatch]);
 

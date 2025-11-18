@@ -34,18 +34,18 @@ const WildCardRecord = Record<WildCardProps>({
 } as WildCardProps);
 
 export function numbered_card(color: Color, number: Digit): Card {
-  return NumberedCardRecord({ color, number }).toJS() as Card;
+  return { type: 'NUMBERED', color, number };
 }
 
 export function action_card<T extends Extract<Type, 'SKIP' | 'REVERSE' | 'DRAW2'>>(
   type: T, 
   color: Color
 ): Card {
-  return ActionCardRecord({ type, color }).toJS() as Card;
+  return { type, color };
 }
 
 export function wild_card<T extends Extract<Type, 'WILD' | 'DRAW4'>>(type: T): Card {
-  return WildCardRecord({ type }).toJS() as Card;
+  return { type };
 }
 
 export function immutable_numbered_card(color: Color, number: Digit): Record<NumberedCardProps> {

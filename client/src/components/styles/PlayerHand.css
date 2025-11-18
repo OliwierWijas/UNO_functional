@@ -1,0 +1,35 @@
+.player-hand {
+  position: relative;
+  width: 75%;
+  height: 12rem;
+}
+
+.hand-cards {
+  display: flex;
+  height: 100%;
+  align-items: flex-end;
+}
+
+.uno-card {
+  position: absolute;
+  bottom: 0;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.uno-card:hover {
+  transform: translateY(-2.5rem);
+  z-index: 50;
+}
+
+.waiting-message {
+  color: white;
+  font-size: 2rem;
+  text-align: center;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  margin-top: 0;
+}
