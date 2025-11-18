@@ -18,10 +18,10 @@ export interface Broadcaster {
 }
 
 export type API = {
-  create_game: (name: string, playerName: string) => Promise<ServerResponse<void, ServerError>>
+  create_game: (name: string, playerName: string) => Promise<ServerResponse<Game, ServerError>>
   get_pending_games: () => Promise<ServerResponse<CreateGameDTO[], ServerError>>
   get_ongoing_game: (name: string) => Promise<ServerResponse<Game, ServerError>>
-  create_player_hand : (playerName: string, gameName: string)  => Promise<ServerResponse<void, ServerError>>
+  create_player_hand : (playerName: string, gameName: string)  => Promise<ServerResponse<Game, ServerError>>
   // get_games: () => Promise<ServerResponse<Game[], ServerError>>
   // get_game_player_hands : (gameName: GamesNameDTO) => Promise<ServerResponse<PlayerHand[], ServerError>>
   // start_game: (gameName: GamesNameDTO) => Promise<ServerResponse<Game, ServerError>>
@@ -37,8 +37,14 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
     const newGame = await server.get_ongoing_game(game)
     
     const pendingGames = await server.get_pending_games()
-    pendingGames.process(broadcastGames)
-    newGame.process(broadcastOngoingGame)
+
+    await pendingGames.process(async (pendingGames) => {
+      await broadcastGames(pendingGames);
+    });
+
+    await newGame.process(async (game) => {
+      await broadcastOngoingGame(game);
+    });
 
     return result
   }
@@ -81,7 +87,14 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
   }
 
   async function create_player_hand(playerName: string, gameName: string){
-    return await server.create_player_hand(playerName, gameName);
+    await server.create_player_hand(playerName, gameName);
+    const game = await server.get_ongoing_game(gameName)
+
+    await game.process(async (game) => {
+      await broadcastOngoingGame(game);
+    });
+
+    return game
   }
 
   // async function get_game_player_hands(gameName : GamesNameDTO){

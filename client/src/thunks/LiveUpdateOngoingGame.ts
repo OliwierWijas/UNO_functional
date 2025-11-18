@@ -8,7 +8,6 @@ export default (gameName: string) => async (dispatch: Dispatch) => {
   
   ongoing_game_subject.subscribe((ongoing_game: Game) => {
     const gamesArray = [ongoing_game];
-    console.log("thunk",ongoing_game)
     dispatch(ongoing_games_slice.actions.reset(gamesArray));
   });
 }

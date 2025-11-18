@@ -56,7 +56,7 @@ export type ServerError = { type: 'Forbidden' } | StoreError
 const Forbidden: ServerError = { type: 'Forbidden' } as const
 
 export interface GameStore {
-  create_game(name: string, playerName: string): Promise<ServerResponse<void, StoreError>>
+  create_game(name: string, playerName: string): Promise<ServerResponse<Game, StoreError>>
   get_ongoing_game(name: string): Promise<ServerResponse<Game, StoreError>>
   get_pending_games(): Promise<ServerResponse<CreateGameDTO[], StoreError>>
   create_player_hand(playerName: string, gameName: string): Promise<ServerResponse<void, StoreError>>
@@ -77,7 +77,7 @@ export class ServerModel {
     this.store = store
   }
 
-  async create_game(name: string, playerName: string): Promise<ServerResponse<void, StoreError>> {
+  async create_game(name: string, playerName: string): Promise<ServerResponse<Game, StoreError>> {
     const result = await this.store.create_game(name, playerName)
     return result
   }

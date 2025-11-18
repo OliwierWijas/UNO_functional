@@ -19,10 +19,18 @@ type Card {
 
 type Round {
   playerHands: [PlayerHand!]!
-  deck: [Card]!
-  discardPile: [Card!]!
+  deck: Deck!
+  discardPile: DiscardPile!
   currentPlayerIndex: Int!
   isFinished: Boolean!
+}
+
+type Deck {
+  cards: [Card!]!
+}
+
+type DiscardPile {
+  cards: [Card!]!
 }
 
 type PlayerHandSubscription {
@@ -72,8 +80,8 @@ type RoundWon {
 }
 
 type Mutation {
-  create_game(name: String!, playerName: String!) : String!
-  create_player_hand(playerName: String!, gameName: String!): String!
+  create_game(name: String!, playerName: String!) : Game!
+  create_player_hand(playerName: String!, gameName: String!): Game!
 
   start_game(gameName: GameNameDTO!): Game!
   take_cards(takeCardsDTO: TakeCardsDTO!): [Card!]!

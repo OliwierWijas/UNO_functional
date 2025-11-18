@@ -11,13 +11,10 @@ const init_state: OngoingGamesState = [];
 
 const ongoing_games_reducers = {
   reset(_state: OngoingGamesState, action: PayloadAction<Game[]>): OngoingGamesState {
-    console.log("erkjgbj")
-    console.log(action.payload)
     return action.payload;
   },
 
   upsert(state: OngoingGamesState, action: PayloadAction<Game[]>): OngoingGamesState {
-    console.log(action.payload)
     return action.payload
   },
 

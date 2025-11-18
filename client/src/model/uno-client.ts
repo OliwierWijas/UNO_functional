@@ -74,14 +74,18 @@ export async function ongoingGameRxJS(name: string) {
             score
           }
           deck {
-            color
-            digit
-            type
+            cards {
+              color
+              digit
+              type
+            }
           }
           discardPile {
-            color
-            digit
-            type
+            cards {
+              color
+              digit
+              type
+            }
           }
           currentPlayerIndex
           isFinished
@@ -91,7 +95,10 @@ export async function ongoingGameRxJS(name: string) {
       }
     }`
   
-  const extractor = (data: { ongoing_game_updated: Game }) => data.ongoing_game_updated
+  const extractor = (data: { ongoing_game_updated: Game }) => {
+    console.log("Subscription data received:", data);
+    return data.ongoing_game_updated;
+  }
   return subscriptionsRxJS(apolloClient, ongoingGameSubscription, extractor, { name })
 }
 
@@ -163,25 +170,84 @@ export async function get_pending_games(): Promise<SimpleGameDTO[]> {
   return response.get_pending_games
 }
 
-export async function create_game(name: string, playerName: string): Promise<void> {
+export async function create_game(name: string, playerName: string): Promise<Game> {
   const response = await mutate(gql`
     mutation CreateGame($name: String!, $playerName: String!) {
-      create_game(name: $name, playerName: $playerName)
-    }
-  `, { name, playerName }) as { create_game: { message: string } }
+      create_game(name: $name, playerName: $playerName) {
+        name
+        rounds {
+          playerHands {
+            playerName
+            cards {
+              color
+              digit
+              type
+            }
+            score
+          }
+          deck {
+            cards {
+              color
+              digit
+              type
+            }
+          }
+          discardPile {
+            cards {
+              color
+              digit
+              type
+            }
+          }
+          currentPlayerIndex
+          isFinished
+        }
+        currentRoundIndex
+        state
+      }
+    }`, { name, playerName }) as { create_game: Game }
 
-  console.log(response.create_game)
+    return response.create_game
 }
 
-export async function create_player_hand(playerName: string, gameName: string): Promise<void> {
-  console.log(playerName, gameName)
+export async function create_player_hand(playerName: string, gameName: string): Promise<Game> {
   const response = await mutate(gql`
     mutation CreatePlayerHand($playerName: String!, $gameName: String!) {
-      create_player_hand(playerName: $playerName, gameName: $gameName)
-    }
-  `, { playerName, gameName }) as { create_player_hand: string };
+      create_player_hand(playerName: $playerName, gameName: $gameName) {
+        name
+        rounds {
+          playerHands {
+            playerName
+            cards {
+              color
+              digit
+              type
+            }
+            score
+          }
+          deck {
+            cards {
+              color
+              digit
+              type
+            }
+          }
+          discardPile {
+            cards {
+              color
+              digit
+              type
+            }
+          }
+          currentPlayerIndex
+          isFinished
+        }
+        currentRoundIndex
+        state
+      }
+    }`, { playerName, gameName }) as { create_player_hand: Game }
 
-  console.log(response.create_player_hand)
+  return response.create_player_hand
 }
 
 export async function start_game(gameName: string): Promise<Game> {

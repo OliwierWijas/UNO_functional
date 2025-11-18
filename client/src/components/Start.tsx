@@ -30,7 +30,6 @@ const Start = () => {
 
   const createGame = useCallback(() => {
     if (canStart) {
-      // Dispatch the thunk
       dispatch(createGameThunk(newGameName, playerName));
       navigate(`/game?playerName=${playerName}&gameName=${newGameName}`);
     }
@@ -39,14 +38,9 @@ const Start = () => {
   const joinGame = useCallback((gameName: string) => {
     if (canJoin) {
       dispatch(joinGameThunk(gameName, playerName));
-      navigate('/game', { 
-            state: { 
-              playerName: playerName,
-              gameName: gameName
-            }
-          });
+      navigate(`/game?playerName=${playerName}&gameName=${gameName}`);
     }
-  }, [playerName, dispatch]);
+  }, [newGameName, playerName, dispatch]);
 
 
   /*const joinGame = useCallback((gameName: string) => {

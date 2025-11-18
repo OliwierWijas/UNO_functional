@@ -46,11 +46,11 @@ const GameContainer: React.FC = () => {
     }
   }, [gameName, dispatch]);
   
-  const ongoingGames = useSelector<State, OngoingGamesState>(state => state.ongoing_games || []);
+  const ongoingGame = useSelector<State, OngoingGamesState>(state => state.ongoing_games || []);
 
   const currentGame = useMemo(() => {
-    return ongoingGames.find(g => g.name === gameName);
-  }, [ongoingGames, gameName]);
+    return ongoingGame.find(g => g.name === gameName);
+  }, [ongoingGame, gameName]);
 
   const canStartGame = useMemo(() => {
     return currentGame

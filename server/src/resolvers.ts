@@ -37,14 +37,14 @@ export const create_resolvers = (pubsub: PubSub, api: API) => {
       async create_game(_: any, params: { name : string, playerName: string }) {
         const res = await api.create_game(params.name, params.playerName)
         return res.resolve({
-          onSuccess: async _ => "Game creation succeeded.",
+          onSuccess: async game => game,
           onError: respond_with_error
         })
       },
       async create_player_hand(_: any, params: { playerName: string, gameName: string }){
         const res = await api.create_player_hand(params.playerName, params.gameName)
         return res.resolve({
-          onSuccess: async _ => "Player creation succeeded.",
+          onSuccess: async game => game,
           onError: respond_with_error
         })
       },
@@ -134,7 +134,7 @@ export const create_resolvers = (pubsub: PubSub, api: API) => {
       ongoing_game_updated : {
         subscribe: (_: any, params: { name: string }) => 
           pubsub.asyncIterableIterator([`ONGOING_GAME_${params.name}`]),
-        resolve: (payload: any) => { console.log(payload.ongoingGame); return payload.ongoingGame }
+        resolve: (payload: any) => { console.log("payload",payload.game); return payload.game }
       },
 
       // game_player_hands_updated : {

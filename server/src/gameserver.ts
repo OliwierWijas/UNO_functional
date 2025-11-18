@@ -28,6 +28,7 @@ async function startServer() {
       await pubsub.publish('PENDING_GAMES', { games })
     },
     async sendOngoingGame(gameName: string, game: Game) {
+      console.log("Publishing to:", `ONGOING_GAME_${gameName}`);
       await pubsub.publish(`ONGOING_GAME_${gameName}`, { game });
     },
 //     async sendPlayerHands(gameName: string, playerHands: PlayerHandSubscription[]) {

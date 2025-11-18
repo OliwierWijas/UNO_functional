@@ -20,14 +20,14 @@ export class MemoryStore implements GameStore {
     this._games = [...games]
   }
 
-  async create_game(name: string, playerName: string) : Promise<ServerResponse<void, StoreError>> {
+  async create_game(name: string, playerName: string) : Promise<ServerResponse<Game, StoreError>> {
     const initialPlayer = player_hand(playerName)
     const initialRound = round([initialPlayer], create_deck())
 
     const newGame = game(name, initialRound)
     this._games.push(newGame)
     
-    return ServerResponse.ok(undefined)
+    return ServerResponse.ok(newGame)
   }
 
   async get_ongoing_game(name: string) {
