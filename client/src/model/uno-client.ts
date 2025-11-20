@@ -68,7 +68,7 @@ export async function ongoingGameRxJS(name: string) {
             playerName
             cards {
               color
-              digit
+              number
               type
             }
             score
@@ -76,14 +76,14 @@ export async function ongoingGameRxJS(name: string) {
           deck {
             cards {
               color
-              digit
+              number
               type
             }
           }
           discardPile {
             cards {
               color
-              digit
+              number
               type
             }
           }
@@ -135,7 +135,7 @@ export async function discardPileRxJS(gameName: string) {
     subscription DiscardPileUpdated($gameName: String!) {
       discard_pile_updated(gameName: $gameName) {
         color
-        digit
+        number
         type
       }
     }`
@@ -180,7 +180,7 @@ export async function create_game(name: string, playerName: string): Promise<Gam
             playerName
             cards {
               color
-              digit
+              number
               type
             }
             score
@@ -188,14 +188,14 @@ export async function create_game(name: string, playerName: string): Promise<Gam
           deck {
             cards {
               color
-              digit
+              number
               type
             }
           }
           discardPile {
             cards {
               color
-              digit
+              number
               type
             }
           }
@@ -220,7 +220,7 @@ export async function create_player_hand(playerName: string, gameName: string): 
             playerName
             cards {
               color
-              digit
+              number
               type
             }
             score
@@ -228,14 +228,14 @@ export async function create_player_hand(playerName: string, gameName: string): 
           deck {
             cards {
               color
-              digit
+              number
               type
             }
           }
           discardPile {
             cards {
               color
-              digit
+              number
               type
             }
           }
@@ -250,44 +250,32 @@ export async function create_player_hand(playerName: string, gameName: string): 
   return response.create_player_hand
 }
 
-export async function start_game(gameName: string): Promise<Game> {
+export async function start_game(gameName: string): Promise<string> {
   const response = await mutate(gql`
     mutation StartGame($gameName: String!) {
-      start_game(gameName: $gameName) {
-        name
-        state
-        playerHands {
-          playerName
-          cards
-          score
-        }
-      }
+      start_game(gameName: $gameName)
     }
-  `, { gameName }) as { start_game: Game }
+  `, { gameName }) as { start_game: string };
 
   return response.start_game
 }
 
-export async function take_cards(gameName: string, playerName: string, numberOfCards: number): Promise<Card[]> {
+export async function take_cards(gameName: string, playerName: string, numberOfCards: number): Promise<string> {
   const response = await mutate(gql`
     mutation TakeCards($gameName: String!, $playerName: String!, $numberOfCards: Int!) {
       take_cards(takeCardsDTO: {
         gameName: $gameName,
         playerName: $playerName,
         numberOfCards: $numberOfCards
-      }) {
-        color
-        digit
-        type
-      }
+      })
     }
-  `, { gameName, playerName, numberOfCards }) as { take_cards: any[] }
+  `, { gameName, playerName, numberOfCards }) as { take_cards: string }
 
   if (!response.take_cards) {
     throw new Error("Server Error: No cards returned")
   }
 
-  return response.take_cards.map(map_card)
+  return response.take_cards
 }
 
 export async function play_card(gameName: string, index: number): Promise<boolean> {

@@ -41,6 +41,7 @@ export const create_resolvers = (pubsub: PubSub, api: API) => {
           onError: respond_with_error
         })
       },
+      
       async create_player_hand(_: any, params: { playerName: string, gameName: string }){
         const res = await api.create_player_hand(params.playerName, params.gameName)
         return res.resolve({
@@ -48,30 +49,22 @@ export const create_resolvers = (pubsub: PubSub, api: API) => {
           onError: respond_with_error
         })
       },
-      // async start_game(_: any, params: { gameName: GamesNameDTO }) {
-      //   const res = await api.start_game(params.gameName);
-      //   return res.resolve({
-      //     onSuccess: async game => game,
-      //     onError: respond_with_error
-      //   });
-      // },
-      // async take_cards(_: any, params: { takeCardsDTO: TakeCardsDTO }) {
-      //   const res = await api.take_cards(
-      //     params.takeCardsDTO.gameName,
-      //     params.takeCardsDTO.playerName,
-      //     params.takeCardsDTO.numberOfCards
-      //   );
-      //   return res.resolve({
-      //     onSuccess: async (cards) => {
-      //       return cards.map(card => ({
-      //         color: 'color' in card ? card.color : null,
-      //         digit: card.type === 'NUMBERED' ? card.number : null,
-      //         type: card.type
-      //       }));
-      //     },
-      //     onError: respond_with_error
-      //   });
-      // },
+
+      async start_game(_: any, params: { gameName: string }) {
+        const res = await api.start_game(params.gameName);
+        return res.resolve({
+          onSuccess: async _ => "Game succesfully started.",
+          onError: respond_with_error
+        });
+      },
+
+      async take_cards(_: any, params: { takeCardsDTO: TakeCardsDTO }) {
+        const res = await api.take_cards(params.takeCardsDTO.gameName, params.takeCardsDTO.playerName, params.takeCardsDTO.numberOfCards);
+        return res.resolve({
+          onSuccess: async _ => "Card successully taken.",
+          onError: respond_with_error
+        });
+      },
       // async play_card(_: any, params: { playCard: PlayCardDTO }) {
       //   console.log(params.playCard.gameName)
       //   console.log(params.playCard.index)

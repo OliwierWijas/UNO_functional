@@ -22,10 +22,10 @@ export type API = {
   get_pending_games: () => Promise<ServerResponse<CreateGameDTO[], ServerError>>
   get_ongoing_game: (name: string) => Promise<ServerResponse<Game, ServerError>>
   create_player_hand : (playerName: string, gameName: string)  => Promise<ServerResponse<Game, ServerError>>
+  start_game: (gameName: string) => Promise<ServerResponse<void, ServerError>>
+  take_cards: (gameName: string, playerName: string, number: number) => Promise<ServerResponse<void, ServerError>>
   // get_games: () => Promise<ServerResponse<Game[], ServerError>>
   // get_game_player_hands : (gameName: GamesNameDTO) => Promise<ServerResponse<PlayerHand[], ServerError>>
-  // start_game: (gameName: GamesNameDTO) => Promise<ServerResponse<Game, ServerError>>
-  // take_cards: (gameName: string, playerName: string, number: number) => Promise<ServerResponse<Card[], ServerError>>
   // play_card: (gameName: string, index: number) => Promise<ServerResponse<boolean, ServerError>>
 }
 
@@ -96,17 +96,35 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
 
     return game
   }
+  
+  async function start_game(gameName: string) {
+    const result = await server.start_game(gameName);
+
+    const game = await server.get_ongoing_game(gameName)
+
+    await game.process(async (game) => {
+      await broadcastOngoingGame(game);
+    });
+
+    return result
+  }
+
+  async function take_cards(gameName: string, playerName: string, number: number) {
+    const result = await server.take_cards(gameName, playerName, number)
+
+    const game = await server.get_ongoing_game(gameName)
+
+    await game.process(async (game) => {
+      await broadcastOngoingGame(game);
+    });
+
+    return result
+  }
 
   // async function get_game_player_hands(gameName : GamesNameDTO){
   //   const playerHands = await server.get_games_player_hands({ name: gameName.name});
   //   return playerHands
   // }
-
-  // async function start_game(gameName: GamesNameDTO) {
-  //   const result = await server.start_game(gameName);
-  //   result.process(async (game) => {
-  //     await broadcaster.sendGameStarted(gameName.name, game);
-  //   });
 
   //   const currentPlayer = await server.get_current_player(gameName.name)
   //   currentPlayer.process(async (player) => {
@@ -116,17 +134,6 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
   //   return result;
   // }
 
-  // async function take_cards(gameName: string, playerName: string, number: number) {
-  //   const cards = await server.take_cards(gameName, playerName, number)
-
-  //   // update player hands
-  //   const playerHands = await server.get_games_player_hands({ name: gameName })
-  //   await playerHands.process(hands => {
-  //     return broadcastPlayerHands(gameName, hands);
-  //   })
-
-  //   return cards
-  // }
 
 // async function play_card(gameName: string, index: number) {
 //   const cardPlayed = await server.play_card(gameName, index)
@@ -205,10 +212,10 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
     get_pending_games,
     get_ongoing_game,
     create_player_hand,
+    start_game,
+    take_cards,
     // get_games,
     // get_game_player_hands,
-    // start_game,
-    // take_cards,
     // play_card,
     // round_won
   }

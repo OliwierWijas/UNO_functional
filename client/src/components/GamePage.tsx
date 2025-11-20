@@ -1,42 +1,26 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { player_hand as createPlayerHand, type PlayerHand } from 'domain/src/model/playerHand';
-import { discard_pile as createDiscardPile } from 'domain/src/model/discardPile';
-import { round } from 'domain/src/model/round';
 import './styles/Game.css';
 import type { Dispatch } from '../stores/stores';
 import { useDispatch } from 'react-redux';
-
 import * as api from '../model/uno-client';
-
 import OpponentHand from './OpponentHand';
-import PlayerHandComponent from './PlayerHand';
 import Deck from './Deck';
-import TopInfoBar from './TopInfoBar';
-import DiscardPile from './DiscardPile';
 import { useSelector } from 'react-redux';
 import type { State } from '../stores/stores';
 import type { OngoingGamesState } from '../slices/ongoing_games_slice';
 import LiveUpdateOngoingGame from '../thunks/LiveUpdateOngoingGame';
-
-interface RoundWinner {
-  winner: string;
-  score: number;
-}
+import DiscardPile from './DiscardPile';
+import PlayerHandComponent from './PlayerHand';
 
 const GameContainer: React.FC = () => {
   const query = new URLSearchParams(useLocation().search);
   const gameName = query.get('gameName') || 'DefaultGame';
   const playerName = query.get('playerName') || 'Player';
 
-
-  const [playerHand] = useState(() => createPlayerHand(playerName));
-  const [opponents, setOpponents] = useState<PlayerHand[]>([]);
-  const [currentRound, setCurrentRound] = useState(() => round([playerHand]));
-  const [isLoading, setIsLoading] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [hasTakenInitialCards, setHasTakenInitialCards] = useState(false);
-  const [roundWinner, setRoundWinner] = useState<RoundWinner | null>(null);
+  // const [currentRound, setCurrentRound] = useState(() => round([playerHand]));
+  // const [hasTakenInitialCards, setHasTakenInitialCards] = useState(false);
+  // const [roundWinner, setRoundWinner] = useState<RoundWinner | null>(null);
 
   const dispatch: Dispatch = useDispatch();
   
@@ -48,6 +32,8 @@ const GameContainer: React.FC = () => {
   
   const ongoingGame = useSelector<State, OngoingGamesState>(state => state.ongoing_games || []);
 
+  console.log(ongoingGame[0])
+
   const currentGame = useMemo(() => {
     return ongoingGame.find(g => g.name === gameName);
   }, [ongoingGame, gameName]);
@@ -57,6 +43,16 @@ const GameContainer: React.FC = () => {
       ? currentGame.rounds[currentGame.currentRoundIndex].playerHands.length > 1 && currentGame.state === "PENDING"
       : false;
   }, [currentGame]);
+
+  const gameStarted = useMemo(() => currentGame?.state === "STARTED", [currentGame]);
+
+  const opponents = useMemo(() => {
+    if (!currentGame) return [];
+
+    const allHands = currentGame.rounds[currentGame.currentRoundIndex].playerHands;
+      return allHands
+        .filter(hand => hand.playerName !== playerName)
+  }, [currentGame?.rounds[currentGame.currentRoundIndex].playerHands, playerName]);
 
   /** ----- Helper Functions ----- */
   // const updatePlayerHands = (hands: any[]) => {
@@ -122,16 +118,14 @@ const GameContainer: React.FC = () => {
 
   /** ----- Game Functions ----- */
   const startGame = async () => {
-    if (!canStartGame || isLoading) return;
+    if (!canStartGame) return;
 
     try {
-      setIsLoading(true);
+      console.log(gameName)
       await api.start_game(gameName);
     } catch (error) {
       console.error('Error starting game:', error);
       alert('Failed to start game. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -144,11 +138,6 @@ const GameContainer: React.FC = () => {
   //   currentRound.nextPlayer();
   // };
 
-  // const handleCardDrawn = (card: any) => {
-  //   if (!gameStarted || !card) return;
-  //   playerHand.takeCards([card]);
-  // };
-
   // const handleCardPlayed = async (payload: { cardIndex: number; card: any }) => {
   //   if (!gameStarted) return;
 
@@ -157,20 +146,6 @@ const GameContainer: React.FC = () => {
   //     playerHand.putCardBack(payload.card, payload.cardIndex);
   //   }
   // };
-
-  const loadInitialPlayerHands = async () => {
-    try {
-      const initialHands = currentGame?.rounds[currentGame.currentRoundIndex].playerHands
-      //updatePlayerHands(initialHands);
-
-      if (currentGame) {
-        setGameStarted(true);
-        //initializeGameComponents();
-      }
-    } catch (error) {
-      console.error('Error fetching initial player hands:', error);
-    }
-  };
 
   // const startNextRound = async () => {
   //   if (!roundWinner) return;
@@ -186,7 +161,6 @@ const GameContainer: React.FC = () => {
 
   /** ----- Lifecycle ----- */
   useEffect(() => {
-    loadInitialPlayerHands();
     // setupPlayerHandsSubscription();
     // setupGameStartedSubscription();
     // setupCurrentPlayerSubscription();
@@ -218,10 +192,10 @@ const GameContainer: React.FC = () => {
 
             <button
               onClick={startGame}
-              disabled={!canStartGame || isLoading}
-              className={`start-game-button ${(!canStartGame || isLoading) ? 'disabled' : ''}`}
+              disabled={!canStartGame}
+              className={`start-game-button ${(!canStartGame) ? 'disabled' : ''}`}
             >
-              {isLoading ? 'Starting...' : 'Start Game'}
+              Start Game
             </button>
 
             {!canStartGame && <div className="warning-message">Need at least 2 players to start the game</div>}
@@ -262,18 +236,18 @@ const GameContainer: React.FC = () => {
           )}
 
           <div className="center-area">
-            <DiscardPile />
-            {/* <Deck
+            <DiscardPile discardPile={currentGame?.rounds[currentGame.currentRoundIndex].discardPile} />
+            {<Deck
               gameName={gameName}
               playerName={playerName}
-              //onCardDrawn={handleCardDrawn}
-            /> */}
+            />}
           </div>
 
-          {/* <PlayerHandComponent
-            playerHand={playerHand}
+          { <PlayerHandComponent
+            playerHand={currentGame?.rounds[currentGame.currentRoundIndex].playerHands.find(p => p.playerName === playerName)}
+            gameName={gameName}
             //onCardPlayed={handleCardPlayed}
-          /> */}
+          /> }
         </>
       )}
     </div>

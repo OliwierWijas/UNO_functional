@@ -1,15 +1,27 @@
 import React, { useMemo } from "react";
 import type { PlayerHand } from "domain/src/model/playerHand";
-import type { Card } from "domain/src/model/types";
 import './styles/PlayerHand.css';
 import UnoCard from "./Card";
+import { useSelector } from "react-redux";
+import type { State } from "../stores/stores";
+import type { OngoingGamesState } from "../slices/ongoing_games_slice";
 
 interface PlayerHandProps {
-  playerHand: PlayerHand;
-  onCardPlayed: (payload: { cardIndex: number; card: Card }) => void;
+  playerHand: PlayerHand | undefined;
+  gameName: string
+  //onCardPlayed: (payload: { cardIndex: number; card: Card }) => void;
 }
 
-const PlayerHandComponent: React.FC<PlayerHandProps> = ({ playerHand, onCardPlayed }) => {
+const PlayerHandComponent: React.FC<PlayerHandProps> = ({ playerHand, gameName }) => {
+  if (!playerHand) return null;
+
+  const ongoingGame = useSelector<State, OngoingGamesState>(state => state.ongoing_games || []);
+
+  const currentPlayer = useMemo(() => {
+    const currentGame = ongoingGame.find(g => g.name === gameName);
+    const currentRound = currentGame?.rounds[currentGame.currentRoundIndex]
+    return currentRound?.playerHands[currentRound.currentPlayerIndex]
+  }, [ongoingGame, gameName]);
 
   const spacing = 45;
   const cardWidth = 80;
@@ -29,14 +41,14 @@ const PlayerHandComponent: React.FC<PlayerHandProps> = ({ playerHand, onCardPlay
   };
 
   const isCurrentPlayer = useMemo(
-    () => currentPlayerStore.currentPlayer === playerHand.playerName,
-    [currentPlayerStore.currentPlayer, playerHand.playerName]
+    () => currentPlayer?.playerName === playerHand.playerName,
+    [currentPlayer, playerHand.playerName]
   );
 
-  const playCard = (index: number) => {
-    const card = playerHand.playCard(index);
-    onCardPlayed({ cardIndex: index, card });
-  };
+  // const playCard = (index: number) => {
+  //   const card = playerHand.playCard(index);
+  //   onCardPlayed({ cardIndex: index, card });
+  // };
 
   return (
     <div className="player-hand">
@@ -48,13 +60,13 @@ const PlayerHandComponent: React.FC<PlayerHandProps> = ({ playerHand, onCardPlay
               card={card}
               className="uno-card"
               style={cardStyle(index)}
-              onClick={() => playCard(index)}
+              //onClick={() => playCard(index)}
             />
           ))}
         </div>
       ) : (
         <div className="waiting-message">
-          {currentPlayerStore.currentPlayer} is playing...
+          {currentPlayer?.playerName} is playing...
         </div>
       )}
     </div>

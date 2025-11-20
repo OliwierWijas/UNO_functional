@@ -10,7 +10,6 @@ import type { Dispatch, State } from '../stores/stores'
 const Start = () => {
   const [newGameName, setNewGameName] = useState("");
   const [playerName, setPlayerName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
   const dispatch: Dispatch = useDispatch();
@@ -42,28 +41,6 @@ const Start = () => {
     }
   }, [newGameName, playerName, dispatch]);
 
-
-  /*const joinGame = useCallback((gameName: string) => {
-    if (canJoin) {
-      // For join, we can keep the direct API call or create a thunk
-      api.create_player_hand(playerName, gameName)
-        .then(() => {
-          navigate('/game', { 
-            state: { 
-              playerName: playerName,
-              gameName: gameName
-            }
-          });
-        })
-        .catch((error: any) => {
-          console.error('Error in joinGame:', error);
-          alert("Game has too many players!");
-        });
-    }
-  }, [playerName, navigate, canJoin]);*/
-
-  // Load pending games on component mount
-
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && canStart) {
       createGame();
@@ -88,11 +65,7 @@ const Start = () => {
         <div className="games-section">
           <h2 className="section-title">Available Games</h2>
           
-          {(isLoading) ? (
-            <div className="loading-container">
-              <p>Loading games...</p>
-            </div>
-          ) : pendingGames.length > 0 ? (
+          {pendingGames.length > 0 ? (
             <div className="table-container">
               <table className="games-table">
                 <thead>

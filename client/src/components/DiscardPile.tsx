@@ -1,13 +1,17 @@
 import React from "react";
 import UnoCard from "./Card";
 import './styles/DiscardPile.css';
+import type { DiscardPile } from "domain/src/model/discardPile";
 
-const DiscardPile: React.FC = () => {
+interface DiscardPileProps {
+  discardPile?: DiscardPile | undefined;
+}
 
-  const topCard = discardPileStore.topCard;
+const DiscardPile: React.FC<DiscardPileProps> = ({ discardPile }) => {
+  const topCard = discardPile?.cards[discardPile.cards.length - 1];
 
   return (
-    <div>
+    <div className="discard-pile-container">
       {topCard ? (
         <UnoCard card={topCard} />
       ) : (

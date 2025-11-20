@@ -3,11 +3,11 @@ import type { Card as CardType } from "domain/src/model/types";
 import type { Type } from "domain/src/model/types";
 import './styles/Card.css';
 
-interface UnoCardProps {
+interface UnoCardProps extends React.HTMLAttributes<HTMLDivElement> {
   card: CardType;
 }
 
-const UnoCard: React.FC<UnoCardProps> = ({ card }) => {
+const UnoCard: React.FC<UnoCardProps> = ({ card, className, style, ...rest }) => {
 
   const isColoredCard = (card: CardType): card is Extract<CardType, { color: string }> => {
     return 'color' in card;
@@ -26,6 +26,7 @@ const UnoCard: React.FC<UnoCardProps> = ({ card }) => {
     REVERSE: (card) => `/src/components/images/${card.color}_Reverse.png`,
     DRAW2: (card) => `/src/components/images/${card.color}_Draw_2.png`,
   };
+  
 
   const wildImageMap: Record<'WILD' | 'DRAW4', string> = {
     WILD: `/src/components/images/Wild_Card_Change_Colour.png`,
@@ -35,10 +36,13 @@ const UnoCard: React.FC<UnoCardProps> = ({ card }) => {
   const cardImage = useMemo(() => {
     if (isNumberedCard(card)) {
       return numberedImageMap[card.type](card);
-    } else if (isColoredCard(card)) {
-      return coloredImageMap[card.type](card as any); // Type assertion for TS
-    } else {
+    } else if (isColoredCard(card) && card.type in coloredImageMap) {
+      return coloredImageMap[card.type as keyof typeof coloredImageMap](card as any);
+    } else if (card.type in wildImageMap) {
       return wildImageMap[card.type as 'WILD' | 'DRAW4'];
+    } else {
+      console.warn('Unknown card type:', card);
+      return '/src/components/images/default_card.png';
     }
   }, [card]);
 

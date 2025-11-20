@@ -8,7 +8,7 @@ import { add_card, discard_pile, get_top_card } from './discardPile'
 
 export interface Round {
   readonly playerHands: PlayerHand[];
-  readonly deck: Deck;
+  deck: Deck;
   readonly discardPile: DiscardPile;
   readonly currentPlayerIndex: number;
   readonly isFinished: boolean;

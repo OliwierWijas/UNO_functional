@@ -44,17 +44,13 @@ export function join_game(g: Game, hand: PlayerHand): Game {
 }
 
 
-export function start_game(g: Game, deck: Deck): Game {
+export function start_game(g: Game): Game {
   if (g.rounds[g.currentRoundIndex].playerHands.length < 2) {
     throw new Error("Too few players.");
   }
 
-  const firstRound = round([...g.rounds[g.currentRoundIndex].playerHands], deck);
-
   return {
     ...g,
-    rounds: [firstRound],
-    currentRoundIndex: 0,
     state: "STARTED"
   };
 }
