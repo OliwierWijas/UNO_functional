@@ -9,8 +9,10 @@ import { DiscardPile } from "domain/src/model/discardPile"
 import { findDealer, round, Round } from "domain/src/model/round"
 import { start_game as startGame } from "domain/src/model/Game"
 import { standardShuffler } from "domain/src/utils/random_utils"
+import { can_be_put_on_top } from "domain/src/utils/rules_helper"
 
 const not_found = (key: any): StoreError => ({ type: 'Not Found', key })
+const card_cannot_be_put = (key: any): StoreError => ({ type: 'Card cannot be put on top.', key })
 
 const game_full = (key: any): StoreError => ({ type: 'Game has too much Players', key })
 export class MemoryStore implements GameStore {
@@ -164,6 +166,73 @@ export class MemoryStore implements GameStore {
     return ServerResponse.ok(undefined)
   }
 
+  async play_card(gameName: string, index: number): Promise<ServerResponse<void, StoreError>> {
+    const targetGame = this._games.find(g => g.name === gameName);
+    if (!targetGame) {
+      return ServerResponse.error(not_found(gameName));
+    }
+
+    const round = targetGame.rounds[targetGame.currentRoundIndex]
+    const currentPlayer = round.playerHands[round.currentPlayerIndex]
+
+    if (!currentPlayer) {
+      return ServerResponse.error(not_found(currentPlayer));
+    }
+
+    const cardToBePut = currentPlayer.cards[index]
+    const topCard = round.discardPile.cards[round.discardPile.cards.length - 1]
+
+    const canBePutOnTop = can_be_put_on_top(topCard, cardToBePut)
+
+    if (!canBePutOnTop) {
+      return ServerResponse.error(card_cannot_be_put(cardToBePut))
+    }
+
+    // remove card from playerhand
+    const newPlayerHand = {
+      ...currentPlayer,
+      cards: currentPlayer.cards.filter((_, i) => i !== index),
+    };
+
+    // add card to deck
+    const newDiscardPile = {
+      ...round.discardPile,
+      cards: [...round.discardPile.cards, cardToBePut]
+    };
+
+    // update player hands
+    const updatedPlayerHands = round.playerHands.map((p, i) =>
+      i === round.currentPlayerIndex ? newPlayerHand : p
+    );
+
+    //update rounds
+    const updatedRound = {
+      ...round,
+      playerHands: updatedPlayerHands,
+      discardPile: newDiscardPile
+    };
+
+    const updatedRounds = targetGame.rounds.map((r, i) =>
+      i === targetGame.currentRoundIndex ? updatedRound : r
+    );
+
+    //update game
+    const updatedGame = {
+      ...targetGame,
+      rounds: updatedRounds
+    };
+
+    console.log(newDiscardPile.cards)
+
+    //save it to the store
+    this._games = this._games.map(g =>
+      g.name === gameName ? updatedGame : g
+    );
+
+    return ServerResponse.ok(undefined);
+  }
+
+
   // async get_game_player_hands(gamesName : GamesNameDTO): Promise<ServerResponse<PlayerHand[], StoreError>> {
   //   const targetGame = this._games.find(g => g.name === gamesName.name);
 
@@ -187,28 +256,6 @@ export class MemoryStore implements GameStore {
 
   //   player.takeCards(cards)
   //   return ServerResponse.ok(cards)
-  // }
-
-  // async play_card(gameName: string, index: number): Promise<ServerResponse<boolean, StoreError>> {
-  //   const targetGame = this._games.find(g => g.name === gameName);
-  //   if (!targetGame) {
-  //     return ServerResponse.error(not_found(gameName));
-  //   }
-
-  //   const currentPlayer = targetGame.rounds[targetGame.currentRoundIndex]?.currentPlayer
-  //   if (!currentPlayer) {
-  //     return ServerResponse.error(not_found(currentPlayer));
-  //   }
-
-  //   const card = currentPlayer.playerCards[index]
-
-  //   const cardCanBePut = targetGame.rounds[targetGame.currentRoundIndex]?.putCard(card) ?? false
-
-  //   if (cardCanBePut) {
-  //     currentPlayer.playCard(index)
-  //   }
-
-  //   return ServerResponse.ok(cardCanBePut);
   // }
 
   // async get_current_player(gameName: string): Promise<ServerResponse<PlayerHand, StoreError>> {

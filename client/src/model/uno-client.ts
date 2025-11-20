@@ -278,7 +278,7 @@ export async function take_cards(gameName: string, playerName: string, numberOfC
   return response.take_cards
 }
 
-export async function play_card(gameName: string, index: number): Promise<boolean> {
+export async function play_card(gameName: string, index: number): Promise<string> {
   const response = await mutate(gql`
     mutation PlayCard($gameName: String!, $index: Int!) {
       play_card(playCard: {
@@ -286,7 +286,7 @@ export async function play_card(gameName: string, index: number): Promise<boolea
         index: $index,
       })
     }
-  `, { gameName, index }) as { play_card: boolean }
+  `, { gameName, index }) as { play_card: string }
 
   return response.play_card
 }

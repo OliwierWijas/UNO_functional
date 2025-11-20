@@ -24,9 +24,9 @@ export type API = {
   create_player_hand : (playerName: string, gameName: string)  => Promise<ServerResponse<Game, ServerError>>
   start_game: (gameName: string) => Promise<ServerResponse<void, ServerError>>
   take_cards: (gameName: string, playerName: string, number: number) => Promise<ServerResponse<void, ServerError>>
+  play_card: (gameName: string, index: number) => Promise<ServerResponse<void, ServerError>>
   // get_games: () => Promise<ServerResponse<Game[], ServerError>>
   // get_game_player_hands : (gameName: GamesNameDTO) => Promise<ServerResponse<PlayerHand[], ServerError>>
-  // play_card: (gameName: string, index: number) => Promise<ServerResponse<boolean, ServerError>>
 }
 
 export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
@@ -121,6 +121,18 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
     return result
   }
 
+  async function play_card(gameName: string, index: number) {
+    const result = await server.play_card(gameName, index)
+
+    const game = await server.get_ongoing_game(gameName)
+
+    await game.process(async (game) => {
+      await broadcastOngoingGame(game);
+    });
+
+    return result
+  }
+
   // async function get_game_player_hands(gameName : GamesNameDTO){
   //   const playerHands = await server.get_games_player_hands({ name: gameName.name});
   //   return playerHands
@@ -134,57 +146,6 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
   //   return result;
   // }
 
-
-// async function play_card(gameName: string, index: number) {
-//   const cardPlayed = await server.play_card(gameName, index)
-
-//   // Check for winner after playing card
-//   if (cardPlayed) {
-//     const gamesRes = await server.get_games();
-//     await gamesRes.process(async (allGames) => {
-//       const targetGame = allGames.find(g => g.name === gameName);
-//       if (!targetGame || !targetGame.rounds[targetGame.currentRoundIndex]) return;
-
-//       // Check if any player has 0 cards
-//       const playersWithNoCards = targetGame.playerHands.filter(p => p.cards.length === 0);
-//       if (playersWithNoCards.length > 0) {
-//         const winner = playersWithNoCards[0];
-        
-//         // Calculate score for remaining players
-//         const remainingPlayers = targetGame.playerHands.filter(p => p.cards.length > 0);
-//         const winnerScore = calculate_score(remainingPlayers);
-        
-//         // Broadcast round won
-//         await broadcaster.sendRoundWon(gameName, targetGame.rounds[targetGame.currentRoundIndex]);
-//       }
-//     });
-
-//     // update discard pile
-//     const discardPile = await server.get_discard_pile(gameName)
-//     await discardPile.process(discardPile => {
-//       const mappedCards: DiscardPileSubscription[] = discardPile.cards.map(card => ({
-//         color: 'color' in card ? card.color : null,
-//         digit: card.type === 'NUMBERED' ? card.number : null,
-//         type: card.type
-//       }));
-//       return broadcastDiscardPile(gameName, mappedCards);
-//     });
-
-//     const currentPlayer = await server.get_current_player(gameName)
-//     currentPlayer.process(async (player) => {
-//       return broadcastCurrentPlayer(gameName, player.playerName)
-//     });
-
-//     // update player hands
-//     const playerHands = await server.get_games_player_hands({ name: gameName })
-//     await playerHands.process(hands => {
-//       const subscriptionHands = hands.map(mapPlayerHandToSubscription)
-//       return broadcastPlayerHands(gameName, subscriptionHands);
-//     })
-//   }
-
-//   return cardPlayed
-// }
 
 // async function round_won(gameName: string): Promise<ServerResponse<void, ServerError>> {
 //   const gamesRes = await server.get_games();
@@ -214,6 +175,7 @@ export const create_api = (broadcaster: Broadcaster, store: GameStore): API => {
     create_player_hand,
     start_game,
     take_cards,
+    play_card,
     // get_games,
     // get_game_player_hands,
     // play_card,

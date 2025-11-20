@@ -84,8 +84,8 @@ type Mutation {
   create_player_hand(playerName: String!, gameName: String!): Game!
   start_game(gameName: String!): String!
   take_cards(takeCardsDTO: TakeCardsDTO!): String!
+  play_card(playCard: PlayCardDTO): String!
 
-  play_card(playCard: PlayCardDTO): Boolean!
   round_won(gameName: String!): RoundWon!
 }
 

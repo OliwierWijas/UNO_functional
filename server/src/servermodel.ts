@@ -41,6 +41,7 @@ export type PlayerHandSubscription = {
 
 export type PlayCardDTO = {
   gameName: string,
+  playerName: string,
   index: number
 }
 
@@ -50,7 +51,7 @@ export type DiscardPileSubscription = {
   type: string
 }
 
-export type StoreError = { type: 'Not Found', key: any } | { type: 'DB Error', error: any } | { type: 'Game has too much Players', key: any }
+export type StoreError = { type: 'Not Found', key: any } | { type: 'DB Error', error: any } | { type: 'Game has too much Players', key: any } | { type: 'Card cannot be put on top.', key: Card }
 export type ServerError = { type: 'Forbidden' } | StoreError
 
 const Forbidden: ServerError = { type: 'Forbidden' } as const
@@ -62,9 +63,9 @@ export interface GameStore {
   create_player_hand(playerName: string, gameName: string): Promise<ServerResponse<void, StoreError>>
   start_game(gamesName: string): Promise<ServerResponse<void, StoreError>>
   take_cards(gameName: string, playerName: string, number: number): Promise<ServerResponse<void, StoreError>>
+  play_card(gameName: string, index: number): Promise<ServerResponse<void, StoreError>>
   // get_games(): Promise<ServerResponse<Game[], StoreError>>
   // get_game_player_hands(gamesName : GamesNameDTO) :  Promise<ServerResponse<PlayerHand[], StoreError>>
-  // play_card(gameName: string, index: number): Promise<ServerResponse<boolean, StoreError>>
   // get_current_player(gameName: string): Promise<ServerResponse<PlayerHand, StoreError>>
   // get_discard_pile(gameName: string): Promise<ServerResponse<DiscardPile, StoreError>>
   // round_won(gameName: string, round: Round): Promise<ServerResponse<void, StoreError>>;
@@ -109,14 +110,14 @@ export class ServerModel {
     return result
   }
 
+  async play_card(gameName: string, index: number): Promise<ServerResponse<void, StoreError>> {
+     const result = await this.store.play_card(gameName, index)
+     return result
+  }
+
   //  async get_games_player_hands(dto : GamesNameDTO) {
   //   var playerHands = await this.store.get_game_player_hands(dto)
   //   return playerHands
-  // }
-
-  // async play_card(gameName: string, index: number): Promise<ServerResponse<boolean, StoreError>> {
-  //   const cardPlayed = await this.store.play_card(gameName, index)
-  //   return cardPlayed
   // }
 
   // async get_current_player(gameName: string): Promise<ServerResponse<PlayerHand, StoreError>> {

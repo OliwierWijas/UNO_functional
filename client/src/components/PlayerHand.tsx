@@ -5,6 +5,8 @@ import UnoCard from "./Card";
 import { useSelector } from "react-redux";
 import type { State } from "../stores/stores";
 import type { OngoingGamesState } from "../slices/ongoing_games_slice";
+import { can_be_put_on_top } from "domain/src/utils/rules_helper";
+import * as api from '../model/uno-client';
 
 interface PlayerHandProps {
   playerHand: PlayerHand | undefined;
@@ -45,10 +47,23 @@ const PlayerHandComponent: React.FC<PlayerHandProps> = ({ playerHand, gameName }
     [currentPlayer, playerHand.playerName]
   );
 
-  // const playCard = (index: number) => {
-  //   const card = playerHand.playCard(index);
-  //   onCardPlayed({ cardIndex: index, card });
-  // };
+  const canPlayCard = (cardToPutIndex: number) : Boolean => {
+    if (!currentPlayer) return false;
+
+    const cardToPut = currentPlayer?.cards[cardToPutIndex]
+    
+    const currentGame = ongoingGame.find(g => g.name === gameName);
+    const currentRound = currentGame?.rounds[currentGame.currentRoundIndex]
+    const topCard = currentRound?.discardPile.cards[currentRound.discardPile.cards.length - 1]
+
+    return can_be_put_on_top(topCard, cardToPut)
+  }
+
+  const playCard = async (cardToPutIndex: number) => {
+    if (canPlayCard(cardToPutIndex)) {
+      await api.play_card(gameName, cardToPutIndex);
+    }
+  };
 
   return (
     <div className="player-hand">
@@ -60,7 +75,7 @@ const PlayerHandComponent: React.FC<PlayerHandProps> = ({ playerHand, gameName }
               card={card}
               className="uno-card"
               style={cardStyle(index)}
-              //onClick={() => playCard(index)}
+              onClick={() => playCard(index)}
             />
           ))}
         </div>

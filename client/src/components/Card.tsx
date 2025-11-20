@@ -47,7 +47,7 @@ const UnoCard: React.FC<UnoCardProps> = ({ card, className, style, ...rest }) =>
   }, [card]);
 
   return (
-    <div className="card-container">
+    <div className="card-container" style={style} {...rest}>
       <img src={cardImage} alt="UNO Card" className="card-image" />
     </div>
   );

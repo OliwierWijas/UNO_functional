@@ -65,15 +65,14 @@ export const create_resolvers = (pubsub: PubSub, api: API) => {
           onError: respond_with_error
         });
       },
-      // async play_card(_: any, params: { playCard: PlayCardDTO }) {
-      //   console.log(params.playCard.gameName)
-      //   console.log(params.playCard.index)
-      //   const res = await api.play_card(params.playCard.gameName, params.playCard.index);
-      //   return res.resolve({
-      //     onSuccess: async cardPlayed => cardPlayed,
-      //     onError: respond_with_error
-      //   });
-      // },
+
+      async play_card(_: any, params: { playCard: PlayCardDTO }) {
+        const res = await api.play_card(params.playCard.gameName, params.playCard.index);
+        return res.resolve({
+          onSuccess: async _ => "Card played successfully.",
+          onError: respond_with_error
+        });
+      },
 
     //   async round_won(_: any, params: { gameName: string }) {
     //     const res = await api.round_won(params.gameName);
