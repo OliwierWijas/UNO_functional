@@ -5,10 +5,12 @@ import { add_score, play_card, take_cards, type PlayerHand } from './playerHand'
 import type { DiscardPile } from './discardPile'
 import { can_be_put_on_top, calculate_score, has_score_500 } from '../utils/rules_helper'
 import { add_card, discard_pile, get_top_card } from './discardPile'
+import { Direction } from './types';
 
 export interface Round {
   readonly playerHands: PlayerHand[];
   deck: Deck;
+  direction: Direction;
   readonly discardPile: DiscardPile;
   readonly currentPlayerIndex: number;
   readonly isFinished: boolean;
@@ -18,6 +20,7 @@ export function round(hands: PlayerHand[], deck: Deck): Round {
   return {
     playerHands: hands,
     deck,
+    direction: "CLOCKWISE",
     discardPile: discard_pile(),
     currentPlayerIndex: 0,
     isFinished: false
@@ -40,7 +43,12 @@ export function findDealer(r: Round): Round {
 }
 
 export function next_player(r: Round): Round {
-  const nextIndex = (r.currentPlayerIndex + 1) % r.playerHands.length;
+  const total = r.playerHands.length;
+
+  const nextIndex =
+    r.direction === "CLOCKWISE"
+      ? (r.currentPlayerIndex + 1) % total
+      : (r.currentPlayerIndex - 1 + total) % total;
 
   return {
     ...r,

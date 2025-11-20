@@ -64,6 +64,7 @@ export async function ongoingGameRxJS(name: string) {
       ongoing_game_updated(name: $name) {
         name
         rounds {
+          direction
           playerHands {
             playerName
             cards {
@@ -176,6 +177,7 @@ export async function create_game(name: string, playerName: string): Promise<Gam
       create_game(name: $name, playerName: $playerName) {
         name
         rounds {
+          direction
           playerHands {
             playerName
             cards {
@@ -216,6 +218,7 @@ export async function create_player_hand(playerName: string, gameName: string): 
       create_player_hand(playerName: $playerName, gameName: $gameName) {
         name
         rounds {
+          direction
           playerHands {
             playerName
             cards {

@@ -218,19 +218,21 @@ export class MemoryStore implements GameStore {
       discardPile: newDiscardPile
     };
 
-    const updatedRoundNextPlayer = next_player(updatedRound)
+    const updatedRoundNextPlayer = this.apply_card_effects(updatedRound, cardToBePut)
 
     const updatedRounds = targetGame.rounds.map((r, i) =>
       i === targetGame.currentRoundIndex ? updatedRoundNextPlayer : r
     );
+
+    if (currentPlayer.cards.length === 0) {
+      
+    }
 
     //update game
     const updatedGame = {
       ...targetGame,
       rounds: updatedRounds
     };
-
-    console.log(newDiscardPile.cards)
 
     //save it to the store
     this._games = this._games.map(g =>
@@ -239,6 +241,73 @@ export class MemoryStore implements GameStore {
 
     return ServerResponse.ok(undefined);
   }
+
+  apply_card_effects(round: Round, playedCard: Card): Round {
+    switch (playedCard.type) {
+      case "DRAW2": {
+        // move to next player
+        const updatedRound = next_player(round);
+
+        // draw 2 cards
+        const [deck, drawnCards] = draw_cards(updatedRound.deck, 2);
+
+        // correct target player index
+        const targetIndex = updatedRound.currentPlayerIndex;
+
+        const updatedPlayerHands = updatedRound.playerHands.map((p, i) =>
+          i === targetIndex ? takeCards(p, drawnCards) : p
+        );
+
+        // after applying penalty, skip this player (normal UNO rules)
+        const finalRound = ({
+          ...updatedRound,
+          deck,
+          playerHands: updatedPlayerHands
+        });
+
+        return finalRound;
+      }
+
+      case "DRAW4": {
+        const updatedRound = next_player(round);
+        const [deck, drawnCards] = draw_cards(updatedRound.deck, 4);
+
+        const targetIndex = updatedRound.currentPlayerIndex;
+
+        const updatedPlayerHands = updatedRound.playerHands.map((p, i) =>
+          i === targetIndex ? takeCards(p, drawnCards) : p
+        );
+
+        const finalRound = ({
+          ...updatedRound,
+          deck,
+          playerHands: updatedPlayerHands
+        });
+
+        return finalRound;
+      }
+
+
+      case "SKIP": {
+        const skipped = next_player(round);
+        const afterSkip = next_player(skipped);
+        return afterSkip
+      }
+
+      case "REVERSE": {
+        const newDirection = round.direction === "CLOCKWISE" ? "COUNTER" : "CLOCKWISE";
+
+        return {
+          ...round,
+          direction: newDirection,
+          currentPlayerIndex: next_player({ ...round, direction: newDirection }).currentPlayerIndex
+        };
+      }
+
+      default:
+        return next_player(round);
+    }
+}
 
 
   // async get_game_player_hands(gamesName : GamesNameDTO): Promise<ServerResponse<PlayerHand[], StoreError>> {
