@@ -50,6 +50,8 @@ const PlayerHandComponent: React.FC<PlayerHandProps> = ({ playerHand, gameName }
   const canPlayCard = (cardToPutIndex: number) : Boolean => {
     if (!currentPlayer) return false;
 
+    if (currentPlayer.playerName !== playerHand.playerName) return false;
+
     const cardToPut = currentPlayer?.cards[cardToPutIndex]
     
     const currentGame = ongoingGame.find(g => g.name === gameName);

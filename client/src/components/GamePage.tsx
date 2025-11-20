@@ -12,6 +12,7 @@ import type { OngoingGamesState } from '../slices/ongoing_games_slice';
 import LiveUpdateOngoingGame from '../thunks/LiveUpdateOngoingGame';
 import DiscardPile from './DiscardPile';
 import PlayerHandComponent from './PlayerHand';
+import TopInfoBar from './TopInfoBar';
 
 const GameContainer: React.FC = () => {
   const query = new URLSearchParams(useLocation().search);
@@ -178,7 +179,7 @@ const GameContainer: React.FC = () => {
         />
       )} */}
 
-      {/* <TopInfoBar /> */}
+      { <TopInfoBar gameName={gameName} /> }
 
       {!gameStarted ? (
         <div className="start-game-section">
