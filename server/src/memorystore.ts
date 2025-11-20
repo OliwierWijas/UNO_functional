@@ -6,7 +6,7 @@ import { create_deck, draw_cards } from "domain/src/model/deck"
 import { Card } from "domain/src/model/types"
 import { Type } from "domain/src/model/types"
 import { DiscardPile } from "domain/src/model/discardPile"
-import { findDealer, round, Round } from "domain/src/model/round"
+import { findDealer, next_player, round, Round } from "domain/src/model/round"
 import { start_game as startGame } from "domain/src/model/Game"
 import { standardShuffler } from "domain/src/utils/random_utils"
 import { can_be_put_on_top } from "domain/src/utils/rules_helper"
@@ -150,8 +150,14 @@ export class MemoryStore implements GameStore {
       playerHands: updatedPlayerHands
     };
 
+    let updatedRoundNextPlayer = updatedRound
+
+    if (number === 1) {
+      updatedRoundNextPlayer = next_player(updatedRound)
+    }
+
     const updatedRounds = targetGame.rounds.map((r, idx) =>
-      idx === targetGame.currentRoundIndex ? updatedRound : r
+      idx === targetGame.currentRoundIndex ? updatedRoundNextPlayer : r
     );
 
     const updatedGame = {
@@ -212,8 +218,10 @@ export class MemoryStore implements GameStore {
       discardPile: newDiscardPile
     };
 
+    const updatedRoundNextPlayer = next_player(updatedRound)
+
     const updatedRounds = targetGame.rounds.map((r, i) =>
-      i === targetGame.currentRoundIndex ? updatedRound : r
+      i === targetGame.currentRoundIndex ? updatedRoundNextPlayer : r
     );
 
     //update game
